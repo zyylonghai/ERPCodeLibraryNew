@@ -1,0 +1,29 @@
+Create ProgInfo  /*功能信息主表*/
+(
+   ProgNm nvarchar(30) // 功能名称（主键）
+   ProgDesc  //功能描述
+)
+
+ProgControlInfo //功能页的控件信息
+(
+    ProgNm nvarchar(30) // 功能名称（主键）
+    ID  // 控件ID（面板，表格，按钮组等）（主键）
+    ControlType //控件类型（面板:colla，表格:grid，按钮组:btngroup等）
+    Title //控件标题
+     DataSourceNm //数据源
+     TableNm  //表名
+     
+)
+ProgFieldInfo //功能页控件绑定的字段信息
+(
+     ProgNm nvarchar(30) // 功能名称（主键）
+     ID  // 控件ID（面板，表格，按钮组等）（主键）
+     Field //字段（主键）
+     IsHide //是否隐藏
+     OnlyRead  //是否只读
+     IsOnline  //是否占据一行
+     ElemType  // 元素类型（单行文本框，多行文本框，日期，下拉选项等）
+     DefaultValue //默认值
+     Remark  //备注
+     
+)
