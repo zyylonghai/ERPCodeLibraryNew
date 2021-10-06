@@ -1,0 +1,243 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>zyy报表测试</title>
+    <link href="../css/okadmin.css" rel="stylesheet" />
+    <script src="../lib/jquery/dist/jquery.js"></script>
+    <script src="../lib/layui/layui.js"></script>
+    <script src="../js/Controls.js"></script>
+    <script src="../js/pageDesign.js"></script>
+    <script src="../js/ajaxBus.js"></script>
+    <script src="../js/appcom.js"></script>
+    <style>
+        .formcanvasrow {
+            border-top-width: 1px;
+            border-top-style: solid;
+            border-top-color: black;
+            border-bottom-width: 1px;
+            border-bottom-style: solid;
+            border-bottom-color: black;
+            border-left-width: 1px;
+            border-left-style: solid;
+            border-left-color: black;
+            border-right-width: 0px;
+            border-right-style: solid;
+            border-right-color: black;
+        }
+
+        .formcanvasrow2 {
+            border-top-width: 0px;
+            border-top-style: solid;
+            border-top-color: black;
+            border-bottom-width: 1px;
+            border-bottom-style: solid;
+            border-bottom-color: black;
+            border-left-width: 1px;
+            border-left-style: solid;
+            border-left-color: black;
+            border-right-width: 0px;
+            border-right-style: solid;
+            border-right-color: black;
+        }
+
+        .formcanvascol {
+            border-top-width: 0px;
+            border-top-style: solid;
+            border-top-color: black;
+            border-bottom-width: 0px;
+            border-bottom-style: solid;
+            border-bottom-color: black;
+            border-left-width: 0px;
+            border-left-style: solid;
+            border-left-color: black;
+            border-right-width: 1px;
+            border-right-style: solid;
+            border-right-color: black;
+        }
+
+        .rowcol {
+            font-size: 12px;
+            width: 73px;
+            height: 30px;
+            text-align: left;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-btn-container">
+        <div class="layui-btn-group">
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-edit" onclick="rptprint()">直接打印</button>
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-edit" onclick="PrintPreview()">打印预览</button>
+        </div>
+    </div>
+    <div style="height:5px;">
+
+    </div>
+    <div id="appproginfos" style="display:none">
+
+    </div>
+    <!--startprint-->
+    <div class="layui-main" style="width:592px;height:842px;background-color:beige">
+        <div id="formdesigncanvas" style="align-content:center;">
+        </div>
+    </div>
+    <!--endprint-->
+</body>
+</html>
+<script>
+    var proginfo;
+    var fieldinfos,controls;
+    $load(function () {
+        getrptinfo();
+    });
+
+    function getrptinfo() {
+        prognm = getQueryVariable("prog").toUpperCase();
+        //if (prognm == null || prognm == undefined) return;
+        $.ajax({
+            type: 'get',
+            url: '/AppSys/Prog/GetRptInfoData',
+            data: { prognm: prognm },
+            success: function (response) {
+                proginfo = response.Data.proginfo.ClientDataInfos[0].Datas;
+                fieldinfos = response.Data.fieldinfos.ClientDataInfos[0].Datas;
+                controls = response.Data.controlinfos.ClientDataInfos[0].Datas;
+                document.getElementById("formdesigncanvas").innerHTML = response.Data.htmlstr;
+                RenderTplHtml('proginfoTpl', 'appproginfos', proginfo, false);
+                GetReportData();
+            },
+            error: function (msg) {
+                //alert(msg.responseText);
+            }
+        });
+    }
+    function GetReportData() {
+        $.ajax({
+            type: 'get',
+            url: getUrl(proginfo.progPackage, proginfo.controllerNm, "GetReportData"),
+            data: {},
+            success: function (returndata) {
+                let data = returndata.ClientDatas;
+                let exit = false;
+                let gridcols = [];
+                controls.forEach(function(o) {
+                    if (o.ControlType == 5) {
+                        let cols = [];
+                        let cs = $('#' + o.ID).find("td");
+                        $.each(cs, function (i, c) {
+                            let fld = getBracketStr($(c).text()).split('.')[1];
+                            if (fld != undefined)
+                                cols.push({ field: fld, title: '' });
+                        });
+                        gridcols.push({ ID: o.ID, cols: cols });
+                    }
+                });
+                $.each(fieldinfos, function (i, f) {
+                    $.each(data, function (i, d) {
+                        exit = false;
+                        $.each(d.collas, function (i, c) {
+                            if (c == f.ID) {
+                                exit = true;
+                                return false;
+                            }
+                        });
+                        if (exit) {
+                            let currctrl;
+                            controls.forEach(function (ctrl) {
+                                if (ctrl.ID == f.ID) {
+                                    currctrl = ctrl;
+                                    return false;
+                                }
+                            });
+                            if (currctrl.ControlType == 4) {
+                                if (f.RptColId != undefined && f.RptColId != '') {
+                                    $.each(d.ClientDataInfos[0].Datas, function (nm, v) {
+                                        if (nm == f.Field) {
+                                            $('#' + f.ID).find($('#' + f.RptColId)).text(v);
+                                            //$('#' + f.RptColId).text(v);
+                                        }
+                                    });
+                                }
+                            }
+                            else if (currctrl.ControlType == 5) {
+                                //let exit2 = false;
+                                gridcols.forEach(function (gd) {
+                                    if (currctrl.ID == gd.ID) {
+                                        if (gd.data == undefined || gd.data == null) {
+                                            gd.data = d.ClientDataInfos;
+                                        }
+                                        gd.cols.forEach(function (f2) {
+                                            if (f.Field == f2.field)
+                                                f2.title = f.Title;
+                                        });
+                                        //exit2 = true;
+                                        return false;
+                                    }
+                                });
+                            }
+                            return false;
+                        }
+                    });
+                });
+
+                gridcols.forEach(function (gd) {
+                    //let gridvm = new appgrid(gd.ID);
+                    //gridvm.$table.columns = gd.cols;
+                    //let data = [];
+                    let tb = $('#' + gd.ID);
+                    let colcount = 0;
+                    $.each(tb.find("td"), function (i, td) {
+                        colcount += 1;
+                        if (gd.cols[i] != undefined)
+                            $(td).text(gd.cols[i].title);
+                    });
+                    //gd.cols.forEach(function (c) {
+
+                    //});
+                    gd.data.forEach(function (d) {
+                        let rw = Createtr(colcount);
+                        let tds = $(rw).children();
+                        tb.append(rw);
+                        $.each(d.Datas, function (n, v) {
+                            $.each(gd.cols, function (i, c) {
+                                if (c.field == n) {
+                                    $(tds[i]).text(v);
+                                    return false;
+                                }
+                            });
+                        });
+                    });
+                    //gridvm.$table.data = data;
+                });
+            },
+            error: function (msg) {
+                //alert(msg.responseText);
+            }
+        });
+    }
+    function Createtr(coltotal) {
+        let row = document.createElement("tr");
+        let col;
+        for (let n = 0; n <coltotal; n++) {
+            col = document.createElement("td");
+            //col.setAttribute("class", "rowcol");
+            //col.setAttribute("fixed", true);
+            //col.setAttribute("fromdata", false);
+            row.append(col);
+        }
+        return row;
+    }
+
+    function rptprint() {
+
+    }
+</script>
+<script id="proginfoTpl" type="text/html">
+    <input id="app_progNm" type="hidden" name="prog" value="{{ d.progNm }}" />
+    <input type="hidden" name="progdesc" value="{{ d.progDesc }}" />
+    <input id="app_progpackage" type="hidden" name="progPackage" value="{{ d.progPackage }}" />
+    <input id="app_controllerNm" type="hidden" name="controllerNm" value="{{ d.controllerNm }}" />
+    <!--<input id="appformverfypass" type="hidden" name="appformverfypass"/>-->
+</script>

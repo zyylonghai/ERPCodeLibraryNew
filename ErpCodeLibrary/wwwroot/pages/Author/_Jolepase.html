@@ -1,0 +1,183 @@
+﻿
+<div id="authoritydialog" style="display:none">
+    <div class="layui-tab layui-tab-brief" lay-filter="authorityDetail">
+        <div>
+            <ul class="layui-tab-title">
+                <li class="layui-this" lay-id="ctrlinfotab">页面控件信息</li>
+                <li lay-id="fieldinfotab">字段信息</li>
+                <li>数据对象</li>
+            </ul>
+        </div>
+        <div class="layui-tab-content">
+            <div class="layui-tab-item layui-show">
+                 <table class="layui-hide" id="controlsgrid" lay-filter="controlsgrid"></table>
+            </div>
+            <div class="layui-tab-item">
+                <table class="layui-hide" id="fieldgrid" lay-filter="fieldgrid"></table>
+            </div>
+            <div class="layui-tab-item">
+
+            </div>
+        </div>
+    </div>
+</div>
+<script id="ishidetpl" type="text/html">
+    <input type="checkbox" {{# if(d.IsHide){}}checked {{# } }} data-id="{{ d.ControlID }}" data-field="{{ d.Field }}"  name="IsHide" lay-skin="switch" lay-filter="IsHide" lay-text="是|否">
+</script>
+<script id="onlyreadtpl" type="text/html">
+    <input type="checkbox" {{# if(d.OnlyRead || d.OldOnlyRead){}}checked {{# } }} data-id="{{ d.ControlID }}" data-field="{{ d.Field }}" name="OnlyRead" lay-skin="switch" lay-filter="OnlyRead" lay-text="是|否" {{# if(d.OldOnlyRead){}} disabled {{# } }}>
+</script>
+<script>
+    var authfields = [];
+    function showauthority() {
+        //var body = $('body');
+        authfields.length = 0;
+        let selectrow = grids[0].getSelectData();
+        if (selectrow == null || selectrow.data == null || selectrow == undefined || selectrow.data == undefined || selectrow.data.length == 0) {
+            appMessageBox("请先选择一行", 5);
+            return false;
+        }
+        if (selectrow.data.length > 1) {
+            appMessageBox("只能选择一行", 5);
+            return false;
+        }
+        let prog = selectrow.data[0].ProgNm;
+        var grid = new appgrid('controlsgrid');
+        grid.$table.url = getUrl(proginfo.progPackage, proginfo.controllerNm, "GetControlAuthorityData")
+        grid.$table.toolbarid = "";
+        grid.$table.title = "控件列表";
+        //grid.$table.hasSelectcol = false;
+        grid.$table.isSimple = false;
+        //grid.$table.totalRow = true;
+        grid.$table.where = { pgnm: prog};
+        let fielddesc = AppGetFieldDesc('Jole', 'AuthorityObj', 'ControlID');
+        var col = new grid.column('ControlID', fielddesc);
+        col.fixed = "left";
+        grid.$table.columns.push(col);
+
+        fielddesc=AppGetFieldDesc('Jole', 'AuthorityObj', 'ControlType');
+        col = new grid.column('ControlType', fielddesc);
+        col.templet = function (d) {
+            if (d.ControlType == 1)
+                return '面板控件';
+            else if (d.ControlType == 2) {
+                return '表格控件';
+            }
+            else if (d.ControlType == 3) {
+                return '按钮组控件';
+            }
+        }
+        grid.$table.columns.push(col);
+
+        fielddesc=AppGetFieldDesc('Jole', 'AuthorityObj', 'Title');
+        col = new grid.column('Title', fielddesc);
+        //col.totalRow = true;
+        grid.$table.columns.push(col);
+        grid.initialTable();
+
+
+        var fgrid = new appgrid("fieldgrid");
+         fgrid.$table.url = getUrl(proginfo.progPackage, proginfo.controllerNm, "GetfieldAuthorityData")
+        fgrid.$table.toolbarid = "";
+        fgrid.$table.title = "字段列表";
+        fgrid.$table.isSimple = false;
+        fgrid.$table.page = false;
+        fgrid.$table.where = { pgnm: prog};
+
+        var col = new fgrid.column('ControlID', '控件ID');
+        col.fixed = "left";
+        fgrid.$table.columns.push(col);
+        var col = new fgrid.column('Field', '字段');
+        fgrid.$table.columns.push(col);
+
+        col = new fgrid.column('Title', '标题');
+        fgrid.$table.columns.push(col);
+
+        var col = new fgrid.column('IsHide', '是否隐藏');
+        col.templet = "#ishidetpl";
+        fgrid.$table.columns.push(col);
+
+        var col = new fgrid.column('OnlyRead', '是否只读');
+        col.templet = "#onlyreadtpl";
+        fgrid.$table.columns.push(col);
+        fgrid.initialTable();
+
+        appComfirmBox('权限对象', 'authoritydialog', true, function () {
+            let ctrldata = grid.getSelectData();
+            let clientdata = [], clientDataInfo;
+            let c = new LibClientDatas();
+            c.TableNm = "AuthorityObj";
+            c.DataSource = "";
+            clientdata.push(c);
+            debugger
+            authfields.forEach(function (f) {
+                //clientDataInfo = new LibClientDataInfo();
+                f.ProgNm = prog;
+                f.AuthorityType = 2;
+                //clientDataInfo.Datas = f;
+                //c.ClientDataInfos.push(clientDataInfo);
+            });
+            ctrldata.data.forEach(function (o) {
+                //clientDataInfo = new LibClientDataInfo();
+                o.ProgNm = prog;
+                o.IsHide = true;
+                o.AuthorityType = 1;
+                authfields.push(o);
+                //clientDataInfo.Datas = o;
+                //c.ClientDataInfos.push(clientDataInfo);
+            });
+            $.ajax({
+                type: 'post',
+                url: getUrl(proginfo.progPackage, proginfo.controllerNm, "SaveAuthorityobj"),
+                data: JSON.stringify(authfields),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                success: function (respon) {
+
+                },
+                error: function (msg) {
+
+                }
+            });
+            return true;
+        });
+    }
+
+      //监听复选框
+    form.on('switch(IsHide)', function (data) {
+
+        let id = $(data.elem).attr("data-id");
+        let fd = $(data.elem).attr("data-field");
+        let chk = this.checked;
+        let exist = false;
+        authfields.forEach(function (f) {
+            if (f.ControlID == id && f.Field == fd) {
+                f.IsHide = chk;
+                exist = true;
+                return false;
+            }
+        });
+        if (!exist) {
+            authfields.push({ ControlID: id, Field: fd, IsHide: chk, OnlyRead: false });
+        }
+    });
+
+    form.on('switch(OnlyRead)', function (data) {
+        debugger
+        let id = $(data.elem).attr("data-id");
+        let fd = $(data.elem).attr("data-field");
+        let chk = this.checked;
+        let exist = false;
+        authfields.forEach(function (f) {
+            if (f.ControlID == id && f.Field == fd) {
+                f.OnlyRead = chk;
+                exist = true;
+                return false;
+            }
+        });
+        if (!exist) {
+            authfields.push({ ControlID: id, Field: fd, IsHide: false, OnlyRead: chk });
+        }
+    });
+
+</script>

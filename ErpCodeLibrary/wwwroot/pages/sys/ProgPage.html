@@ -1,0 +1,129 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>功能开发</title>
+    <link href="../../css/okadmin.css" rel="stylesheet" />
+    <script src="../../lib/jquery/dist/jquery.js"></script>
+    <script src="../../lib/layui/layui.js"></script>
+    <script src="../../js/gridview.js"></script>
+    <script src="../../js/appcom.js"></script>
+</head>
+<body>
+    <div class="layui-main">
+        <div class="layui-collapse">
+            <div class="layui-colla-item">
+                <h2 class="layui-colla-title">功能清单</h2>
+                <div class="layui-colla-content layui-show">
+                    <table class="layui-hide" id="proggrid" lay-filter="proggrid"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/html" id="prog_toolbar">
+        <div class="layui-btn-container">
+            <button class="layui-btn layui-btn-sm" data-gridid="sdfdsk" lay-event="Createfunc">新建功能</button>
+            <button class="layui-btn layui-btn-sm" lay-event="getCheckLength">获取选中数目</button>
+            <button class="layui-btn layui-btn-sm" lay-event="isAll">验证是否全选</button>
+        </div>
+    </script>
+    <script type="text/html" id="progbar">
+        <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+        <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+    </script>
+
+    <script>
+        var grid = new appgrid('proggrid');
+        grid.$table.url = "/AppSys/Prog/GetProgData/ProgInfo";
+        grid.$table.toolbarid = "prog_toolbar";
+        grid.$table.title = "功能列表";
+        //grid.$table.hasSelectcol = false;
+        grid.$table.isSimple = false;
+        grid.$table.totalRow = true;
+        grid.$table.where = {prognm:'checkbillzyy801'};
+        var col = new grid.column('progNm', '功能名称');
+        col.fixed = "left";
+        grid.$table.columns.push(col);
+        col = new grid.column('progDesc', '功能描述');
+        col.totalRowText = "合计";
+        grid.$table.columns.push(col);
+        col = new grid.column('CreateDT', '创建日期');
+        col.totalRow = true;
+        grid.$table.columns.push(col);
+        col = new grid.column('Creater', '创建者');
+        grid.$table.columns.push(col);
+        col = new grid.column('operat', '操作');
+        col.toolbar = "#progbar";
+        grid.$table.columns.push(col);
+        grid.initialTable(toolclick);
+
+        function toolclick(checkdata, event) {
+            switch (event) {
+                case 'Createfunc':
+
+                    break;
+                case 'getCheckLength':
+                    var data = checkdata.data;
+                    layer.msg('选中了：' + data.length + ' 个');
+                    break;
+                case 'isAll':
+                    layer.msg(checkdata.isAll ? '全选' : '未全选')
+                    break;
+            };
+        }
+        $load(function () {
+            element.init();
+        });
+            //layui.use('table', function () {
+            //    var table = layui.table;
+
+            //    //温馨提示：默认由前端自动合计当前行数据。从 layui 2.5.6 开始： 若接口直接返回了合计行数据，则优先读取接口合计行数据。
+            //    //详见：https://www.layui.com/doc/modules/table.html#totalRow
+            //    table.render({
+            //        elem: '#proggrid'
+            //        , url: '/AppSys/Prog/GetProgData'
+            //        , toolbar: '#prog_toolbar'
+            //        , title: '用户数据表'
+            //        , totalRow: true
+            //        , cols: [[
+            //            { type: 'checkbox', fixed: 'left' }
+            //            , { field: 'ProgNm', title: '功能名称', width: 120, fixed: 'left', unresize: true, sort: true, totalRowText: '合计' }
+            //            , { field: 'ProgDesc', title: '功能描述', width: 120,fixed: 'left', edit: 'text' }
+            //            //, {
+            //            //    field: 'email', title: '邮箱', width: 150, edit: 'text', templet: function (res) {
+            //            //        return '<em>' + res.email + '</em>'
+            //            //    }
+            //            //}
+            //            , { field: 'CreateDT', title: '创建日期',  sort: true, totalRow: true }
+            //            , { field: 'Creater', title: '创建者',  edit: 'text', sort: true }
+            //            , { field: 'LastModifyDT', title: '最后修改日期', sort: true, totalRow: true }
+            //            , { field: 'LastModifier', title: '最后修改者' }
+            //            , { field: 'city', title: '城市' }
+            //            , { field: 'ip', title: 'IP' }
+            //            , { field: 'joinTime', title: '加入时间' }
+            //            , { fixed: 'right', title: '操作', toolbar: '#progbar', width: 150 }
+            //        ]]
+            //        , page: true
+            //    });
+
+            //    //工具栏事件
+            //    table.on('toolbar(proggrid)', function (obj) {
+            //        var checkStatus = table.checkStatus(obj.config.id);
+            //        switch (obj.event) {
+            //            case 'getCheckData':
+            //                var data = checkStatus.data;
+            //                layer.alert(JSON.stringify(data));
+            //                break;
+            //            case 'getCheckLength':
+            //                var data = checkStatus.data;
+            //                layer.msg('选中了：' + data.length + ' 个');
+            //                break;
+            //            case 'isAll':
+            //                layer.msg(checkStatus.isAll ? '全选' : '未全选')
+            //                break;
+            //        };
+            //    });
+            //});
+    </script>
+</body>
+</html>

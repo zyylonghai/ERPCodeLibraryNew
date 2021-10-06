@@ -1,0 +1,104 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>租户管理</title>
+    <link href="../../css/okadmin.css" rel="stylesheet" />
+    <script src="../../lib/jquery/dist/jquery.js"></script>
+    <script src="../../lib/layui/layui.js"></script>
+    <script src="../../js/ajaxBus.js"></script>
+    <script src="../../js/appcom.js"></script>
+</head>
+<body>
+    <div class="layui-main">
+        <div style="height:5px"></div>
+        <form class="layui-form" lay-filter="tenantinfo">
+            <div class="layui-form-item">
+                <label class="layui-form-label">租户名：</label>
+                <div class="layui-input-inline">
+                    <input type="text" name="Authenticator" lay-verify="required|Authenticator" lay-reqtext="租户名是必填项" placeholder="请输入租户名" autocomplete="off" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">密码：</label>
+                <div class="layui-input-inline">
+                    <input type="password" name="Password" lay-verify="required|pass" lay-reqtext="密码是必填项" placeholder="请输入密码" autocomplete="off" class="layui-input">
+                </div>
+                <div class="layui-form-mid layui-word-aux">请填写6到12位密码</div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">有效账号数：</label>
+                <div class="layui-input-inline">
+                    <input type="number" name="Validaccounts" lay-verify="required|Validaccounts" lay-reqtext="有效账号数是必填项" placeholder="请输入有效账号数" autocomplete="off" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">失效日期：</label>
+                <div class="layui-input-inline">
+                    <input type="text" id="ExpirationDT" name="ExpirationDT" lay-verify="required|ExpirationDT" lay-reqtext="有效账号数是必填项" placeholder="请输入有效账号数" autocomplete="off" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <label class="layui-form-label">认证口令：</label>
+                <div class="layui-input-inline">
+                    <input type="text" name="Secret" lay-verify="required|Secret" lay-reqtext="认证口令是必填项" placeholder="请输入认证口令" autocomplete="off" class="layui-input">
+                </div>
+            </div>
+            <div class="layui-form-item">
+                <div class="layui-input-block">
+                    <button class="layui-btn" lay-submit lay-filter="formDemo">提交</button>
+                    <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
+<script>
+    $load(function () {
+        layui.laydate.render({
+            elem: '#ExpirationDT'
+            , format: 'yyyy-MM-dd'
+        });
+
+    });
+    layui.use('form', function () {
+        var form = layui.form;
+        //自定义验证规则
+        form.verify({
+            Authenticator: function (value) {
+                if (value.length < 6) {
+                    return '标题至少得6个字符啊';
+                }
+            }
+            , pass: [
+                /^[\S]{6,12}$/
+                , '密码必须6到12位，且不能出现空格'
+            ]
+        });
+        //监听提交
+        form.on('submit(formDemo)', function (data) {
+            //layer.msg(JSON.stringify(data.field));
+            var d = {
+                Authenticator: data.field.Authenticator,
+                Password: data.field.Password,
+                Validaccounts: parseInt(data.field.Validaccounts),
+                ExpirationDT: data.field.ExpirationDT,
+                Secret: data.field.Secret
+            };
+            $.ajax({
+                type: 'post',
+                url: '/AppSys/TenantRegist',
+                data: JSON.stringify(d),
+                success: function (response) {
+                    if (response.IsSuccess)
+                        RedirectUrl("/index.html");
+                },
+                error: function (msg) {
+                    alert(msg);
+                }
+            });
+            return false;
+        });
+    });
+</script>

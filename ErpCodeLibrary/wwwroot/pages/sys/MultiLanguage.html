@@ -1,0 +1,144 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>多语言维护</title>
+    <link href="../../css/okadmin.css" rel="stylesheet" />
+    <script src="../../lib/jquery/dist/jquery.js"></script>
+    <script src="../../lib/layui/layui.js"></script>
+    <script src="../../js/Controls.js"></script>
+    <script src="../../js/pageDesign.js"></script>
+    <script src="../../js/gridview.js"></script>
+    <script src="../../js/appcom.js"></script>
+    <style>
+        .layui-input-block {
+            width: 195px;
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-btn-container">
+        <div class="layui-btn-group">
+            <button id="appbtnadd" class="layui-btn-primary layui-btn-sm layui-icon layui-icon-add-1" onclick="Add()">新增</button>
+            <button id="appbtnsave" class="layui-btn-primary layui-btn-sm layui-icon layui-icon-ok-circle" onclick="Appsave()">保存</button>
+        </div>
+    </div>
+    <!--<div class="layui-main">-->
+    <div class="layui-collapse">
+        <div class="layui-colla-item">
+            <h2 class="layui-colla-title">功能控件/字段信息</h2>
+            <div class="layui-colla-content layui-show">
+                <table class="layui-hide" id="proggrid" lay-filter="proggrid"></table>
+            </div>
+        </div>
+    </div>
+    <!--</div>-->
+    <!--模态框 -->
+    <div id="app_addModel" style="display:none">
+        <form class="layui-form" action="" lay-filter="multilangform">
+            <div class="layui-form-item">
+                <label class="layui-form-label">功能</label>
+                <div class="layui-input-block">
+                    <input type="text" name="ID" required lay-verify="required" readonly placeholder="请输入功能编号" autocomplete="off" class="layui-input layui-disabled">
+                </div>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
+<script type="text/html" id="prog_toolbar">
+
+    <div class="layui-inline">
+        <label class="layui-form-label">功能：</label>
+        <div class="layui-input-block">
+            <!--<select id="DataSource" name="DataSourceNm" lay-verify="required" lay-filter="DataSourceNm">
+            </select>-->
+            <input type="text" id="DataSourceNm" name="DataSourceNm" required lay-verify="required" placeholder="请输入功能名" autocomplete="off" class="layui-input">
+        </div>
+    </div>
+    <div class="layui-inline">
+        <label class="layui-form-label">表名</label>
+        <div class="layui-input-block">
+            <!--<select id="DataSource" name="DataSourceNm" lay-verify="required" lay-filter="DataSourceNm">
+            </select>-->
+            <input type="text" id="tbnm" name="tbnm" required lay-verify="required" placeholder="请输入表名" autocomplete="off" class="layui-input">
+        </div>
+    </div>
+    <div class="layui-inline">
+        <label class="layui-form-label">字段：</label>
+        <div class="layui-input-block">
+            <input type="text" id="fieldnm" name="fieldnm" required lay-verify="required" placeholder="请输入字段" autocomplete="off" class="layui-input">
+        </div>
+    </div>
+    <div class="layui-inline">
+        <label class="layui-form-label">描述:</label>
+        <div class="layui-input-block">
+            <input type="text" id="val" name="val" required lay-verify="required" placeholder="请输入多语言值" autocomplete="off" class="layui-input">
+        </div>
+    </div>
+
+    <div class="layui-inline">
+        <button class="layui-btn-normal layui-btn" onclick="search()">搜索</button>
+    </div>
+</script>
+<script type="text/html" id="coltool">
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+<script>
+    $load(function () {
+        pageload();
+    });
+    var grid;
+    function pageload() {
+        $.ajax({
+            type: 'get',
+            url: '/Author/GetLanguage2/Multilanguage',
+            data: {},
+            success: function (response) {
+                grid = new appgrid('proggrid');
+                grid.$table.url = "/AppSys/MultiLanguage/GetLanguageData/MultiLan";
+                grid.$table.toolbarid = "prog_toolbar";
+                grid.$table.title = "功能列表";
+                var col = new grid.column('operation', '操作');
+                col.fixed = 'left';
+                col.toolbar = "#coltool";
+                grid.$table.columns.push(col);
+
+                col = new grid.column('progNm', '功能名称');
+                col.fixed = "left";
+                col.sort = true;
+                grid.$table.columns.push(col);
+                col = new grid.column('progDesc', '功能描述');
+
+                grid.$table.columns.push(col);
+                col = new grid.column('TableNm', '表名');
+               /* col.sort = true;*/
+
+                grid.$table.columns.push(col);
+                col = new grid.column('FieldNm', '字段名');
+                col.sort = true;
+                grid.$table.columns.push(col);
+                $.each(response.Data, function (i, o) {
+                    col = new grid.column(o.key, o.value);
+                    grid.$table.columns.push(col);
+                });
+                grid.$table.where = { progNm: $('#DataSourceNm').val(), tbnm: $('#tbnm').val(), fieldnm: $('#fieldnm').val(), val:$('#val').val(), pageload: true };
+                grid.initialTable();
+            },
+            error: function (msg) {
+
+            }
+        });
+    }
+
+    function search() {
+        grid.$table.where = { progNm: $('#DataSourceNm').val(), tbnm: $('#tbnm').val(), fieldnm: $('#fieldnm').val(), val: $('#val').val(), pageload: false };
+        grid.ReSetOptions();
+         //grid.$table.where = { progNm: "", tbnm: $('#app_currsearchtbnm').val(), fieldnm: "", val: "", pageload: true };
+        //grid.refreshData();
+    }
+    function Add() {
+        appComfirmBox("新增", "app_addModel", true, function () { });
+    }
+</script>

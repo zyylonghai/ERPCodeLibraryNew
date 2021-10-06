@@ -1,0 +1,97 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <link href="../../css/okadmin.css" rel="stylesheet" />
+    <script src="../../lib/jquery/dist/jquery.js"></script>
+    <script src="../../lib/layui/layui.js"></script>
+    <script src="../../js/Controls.js"></script>
+    <script src="../../js/pageDesign.js"></script>
+    <script src="../../js/gridview.js"></script>
+    <script src="../../js/appcom.js"></script>
+</head>
+<body>
+    <div class="layui-tab layui-tab-brief" lay-filter="docDemoTabBrief">
+        <ul class="layui-tab-title">
+            <li class="layui-this">异常日志查询</li>
+            <li>异常日志设置</li>
+        </ul>
+        <div class="layui-tab-content">
+            <div class="layui-tab-item layui-show">
+                <table class="layui-hide" id="appexceptionloggrid" lay-filter="appexceptionloggrid"></table>
+            </div>
+            <div class="layui-tab-item">
+                异常日志设置
+            </div>
+        </div>
+    </div>
+    <div id="loggrid_toolbar" class="layui-btn-container" style="display:none">
+        <div class="layui-btn-group">
+            <button class="layui-btn layui-btn-sm layui-icon layui-icon-delete" onclick="return clearlogs(this)">清除</button>
+
+        </div>
+    </div>
+    <div id="apploginfo_Model" style="display:none">
+
+    </div>
+</body>
+</html>
+<script>
+    var gd;
+    $load(function () {
+        gd = new appgrid("appexceptionloggrid");
+        gd.$table.url = "/AppSys/GeExceptionLog";
+        gd.$table.toolbarid = "loggrid_toolbar";
+        gd.$table.title = "功能列表";
+        gd.$table.isSimple = false;
+        var col = new gd.column('FileNm', '日志文件');
+        col.width = 250;
+        col.templet = '<div><a href="javascript:;" class="layui-table-link" onclick="Showlogcontent(this)" title="查看">{{d.FileNm}}</a></div>';
+        gd.$table.columns.push(col);
+        col = new gd.column('DateTime', '产生时间');
+        col.width = 250;
+        gd.$table.columns.push(col);
+        col = new gd.column('Head', 'Api/url');
+        col.width = 450;
+        gd.$table.columns.push(col);
+        gd.initialTable();
+    });
+    function Showlogcontent(obj) {
+        //alert($(obj).text());
+        //var html;
+        $.ajax({
+            type: "Get",
+            url: '/AppSys/ReadLogfile',
+            data: { filenm: $(obj).text() },
+            dataType: "Json",
+            success: function (data) {
+                $('#apploginfo_Model').html("<div>" + data.Data + "</div>");
+                appComfirmBox('异常日志信息', 'apploginfo_Model', true, function () {
+                    return true;
+                });
+            },
+            error: function () {
+            }
+        });
+    }
+    function clearlogs(obj) {
+        let selectdata = gd.getSelectData();
+        var files = [];
+        $.each(selectdata.data, function (index, dr) {
+            files.push(dr.FileNm);
+        });
+        $.ajax({
+            type: "post",
+            url: '/AppSys/Deletelogfile',
+            data: JSON.stringify(files),
+            contentType: 'application/json; charset=utf-8',
+            dataType: "Json",
+            success: function (data) {
+                gd.refreshData();
+            },
+            error: function () {
+            }
+        });
+    }
+</script>

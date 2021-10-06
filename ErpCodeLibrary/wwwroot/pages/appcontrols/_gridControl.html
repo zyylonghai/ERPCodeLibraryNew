@@ -1,0 +1,130 @@
+﻿<div id="apppagecontent" class="layui-main">
+    
+</div>
+<script>
+    $load(function () {
+        _getproginfo();
+
+    });
+    function _getproginfo() {
+        let prognm = $('#_gridprognm').val();
+        //if (prognm == null || prognm == undefined) return;
+        $.ajax({
+            type: 'get',
+            url: '/AppSys/Prog/GetProgInfoData',
+            data: { prognm: prognm.toUpperCase() },
+            success: function (response) {
+                _renderhtml(response.Data);
+            },
+            error: function (msg) {
+            }
+        });
+    }
+    function _renderhtml(data) {
+        let dtfields = [];
+        let dttimes = [];
+        let contentid = $('#_elemId').val();
+        let ctrlid = $('#_ctrlid').val();
+        proginfo = data.proginfo.ClientDataInfos[0].Datas;
+        //let events = [];
+        //RenderTplHtml('proginfoTpl', 'appproginfos', _proginfo, false);
+        data.controlinfos.ClientDataInfos[0].Datas.forEach(function (o) {
+            let ctrobj = o;
+            if (ctrobj.ID == ctrlid&& ctrobj.ControlType == 2) {//grid控件
+                RenderTplHtml('collaTpl', contentid, ctrobj, true);
+                RenderTplHtml('gridTpl', ctrobj.ID, ctrobj, true);
+                RenderTplHtml('appgrid_toolbarTpl', 'appgrid_toolcontainer', ctrobj, true);
+                let url = getUrl(proginfo.progPackage, proginfo.controllerNm, "BindDataGrid")
+                var gd = new appgrid(ctrobj.ID + "_gridvm");
+                //gd.$table.url = url + "?gridid = " + ctrobj.ID + "&ds=" + ctrobj.DataSourceNm + "&tbnm=" + ctrobj.TableNm;
+                gd.$table.url = url;
+                gd.$table.where = { gridid: ctrobj.ID, ds: ctrobj.DataSourceNm, tbnm: ctrobj.TableNm };
+                gd.$table.toolbarid = ctrobj.ID + "_toolbar";
+                gd.$table.title = ctrobj.Title;
+                gd.$table.isSimple = false;
+                gd.$table.totalRow = true;
+                let col;
+                //let btns = [];
+                data.fieldinfos.ClientDataInfos[0].Datas.forEach(function (f) {
+                    if (f.ID == ctrobj.ID && f.ElemType == -1) {
+                        let o = $('#' + gd.$table.toolbarid).children().first();
+                        DoRenderTplHtml('gridtoolbtnTpl', o[0], f, true);
+                        if (f.ClickFunc != undefined && f.ClickFunc != '')
+                            $('#' + f.Field).attr("onclick", "return " + f.ClickFunc);
+                    }
+                    else if (f.ID == ctrobj.ID && !f.IsHide) {
+                        gd.$fields.push(f);
+                        col = new gd.column(f.Field, f.Title);
+                        if (f.ElemType == 3) {//下拉选项类型的字段，需要将值转为对应的描述
+                            getFieldOptionOnly(ctrobj.DataSourceNm, ctrobj.TableNm, f.Field);
+                            //col.templet = '<div><a href="/detail/{{d.'+f.Field+'}}" class="layui-table-link">{{d.'+f.Title+'}}</a></div>';
+                            col.templet = function (d) {
+                                let result = '';
+                                appoptions.forEach(function (o) {
+                                    if (o.TableNm == ctrobj.TableNm && o.Field == f.Field) {
+                                        $.each(o.Options, function (i, v) {
+                                            if (v.key == d[f.Field])
+                                                result = v.value;
+                                        });
+                                    }
+                                });
+                                return result;
+                            }
+                        }
+                        gd.$table.columns.push(col);
+                    }
+                });
+                gd.initialTable();
+                grids.push(gd);
+            }
+
+        });
+        dtfields.forEach(function (dt) {
+            layui.laydate.render({
+                elem: '#' + dt
+                , format: 'yyyy-MM-dd'
+            });
+        });
+        dttimes.forEach(function (dt) {
+            layui.laydate.render({
+                elem: '#' + dt
+                , type: 'datetime'
+                , format: 'yyyy-MM-dd HH:mm:ss'
+            });
+        });
+        element.init();
+        //PageLoad(_proginfo);
+        //events.forEach(function (eo) {
+        //    EventBind(eo);
+        //});
+    }
+    //function _getFieldOptionOnly(ds, tbnm, fieldnm) {
+    //    $.ajax({
+    //        type: 'get',
+    //        url: '/AppSys/GetFieldOptions',
+    //        data: { dsnm: ds, tbnm: tbnm, fieldnm: fieldnm },
+    //        contentType: 'application/json; charset=utf-8',
+    //        dataType: 'json',
+    //        success: function (data) {
+    //            let exist = false;
+    //            _appoptions.forEach(function (o) {
+    //                if (o.TableNm == tbnm && o.Field == fieldnm) {
+    //                    o.Options = data;
+    //                    exist = true;
+    //                    return false;
+    //                }
+    //            });
+    //            if (!exist) {
+    //                let v = new LibAppFieldOption();
+    //                v.TableNm = tbnm;
+    //                v.Field = fieldnm;
+    //                v.Options = data;
+    //                _appoptions.push(v);
+    //            }
+    //        },
+    //        error: function (msg) {
+    //            alert(msg.responseText);
+    //        }
+    //    });
+    //}
+</script>

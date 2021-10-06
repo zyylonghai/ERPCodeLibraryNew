@@ -1,0 +1,1161 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <link href="../css/okadmin.css" rel="stylesheet" />
+    <script src="../lib/jquery/dist/jquery.js"></script>
+    <script src="../lib/layui/layui.js"></script>
+    <script src="../js/Controls.js"></script>
+    <script src="../js/pageDesign.js"></script>
+    <script src="../js/ajaxBus.js"></script>
+    <script src="../js/appcom.js"></script>
+    <script src="../js/gridview.js"></script>
+    <script src="../js/AppTree.js"></script>
+    <style>
+        .erpcodeappcolor {
+            background-color:lightblue;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="appfuncbtngroups" class="layui-btn-container">
+        <div class="layui-btn-group">
+            <button id="appbtnsave" class="layui-btn-primary layui-btn-sm layui-icon layui-icon-ok-circle" onclick="Appsave()">保存</button>
+            <button id="appbtnadd" class="layui-btn-primary layui-btn-sm layui-icon layui-icon-add-1" onclick="AppAdd()">新增</button>
+            <button id="appbtnedit" class="layui-btn-primary layui-btn-sm layui-icon layui-icon-edit" onclick="AppEdit()">编辑</button>
+            <button id="appbtndelete" class="layui-btn-primary layui-btn-sm layui-icon layui-icon-delete" onclick="AppDelete()">删除</button>
+            <button id="appbtncopy" class="layui-btn-primary layui-btn-sm layui-icon layui-icon-file" onclick="AppCopy()">复制</button>
+            <button id="appbtnsearch" class="layui-btn-primary layui-btn-sm layui-icon layui-icon-search" onclick="getsearchmodel()">查询</button>
+            <button id="appbtnlogsearch" class="layui-btn-primary layui-btn-sm layui-icon layui-icon-search" onclick="searchlogdata()">日志查询</button>
+            <!--<button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-refresh" onclick="AppRefresh()">刷新</button>-->
+            <!--<button id="btnformselect" data-method="btnformselect" data-type="auto" class="layui-btn-primary layui-btn-sm layui-icon" style="display:none" onclick="test()">测试</button>
+    <button data-method="datainfo" class="layui-btn-primary layui-btn-sm layui-icon layui-icon-list">属性</button>-->
+        </div>
+    </div>
+    <div style="height:5px"></div>
+    <div id="appproginfos" style="display:none">
+
+    </div>
+    <!--<form class="layui-form" action="" lay-filter="formdata">-->
+    <div id="apppagecontent"  class="layui-main">
+
+    </div>
+    <!--</form>-->
+    <div id="appgrid_toolcontainer" style="display:none"></div>
+    <!--表格工具栏的新增，删除，修改按钮的模态框 -->
+    <div id="appgrid_tableModel" style="display:none">
+
+    </div>
+    <!--主要用于功能查询和来源主数据搜索的模态框-->
+    <div id="app_searchModel" style="display:none">
+        <!--<div class="layui-main">-->
+        <div style="height:5px"></div>
+        <div id="app_searchcondition">
+        </div>
+        <div>
+            <input type="hidden" id="app_currsearchtbnm" />
+            <input type="hidden" id="app_searchflag" />
+            <input type="hidden" id="app_searchfieldid" />
+            <input type="hidden" id="app_searchfromfield" />
+            <input type="hidden" id="app_searchfromdesc" />
+            <button type="button" class="layui-btn layui-btn-lg layui-icon layui-icon-search" onclick="searchdata()">查询</button>
+        </div>
+        <!--</div>-->
+        <div id="appsearchdataview">
+        </div>
+    </div>
+
+    <div id="appdatalog_Model" style="display:none">
+        
+    </div>
+    <div id="appgrid_deletmsg" style="display:none">
+        确定删除选中行？
+    </div>
+</body>
+</html>
+<script>
+    var prognm,searchfromdsindex;
+    var proginfo, grids = [], collaforms = [], appchkboxs = [],appsearchfields=[];
+    var appoptions = [];
+    var hassubmit = false;
+    $load(function () {
+        getproginfo();
+
+    });
+    function getproginfo() {
+        prognm = getQueryVariable("prog").toUpperCase();
+        //if (prognm == null || prognm == undefined) return;
+        $.ajax({
+            type: 'get',
+            url: '/AppSys/Prog/GetProgInfoData',
+            data: { prognm: prognm },
+            success: function (response) {
+                renderhtml(response.Data);
+                if (proginfo != null && proginfo != undefined) {
+                    if (proginfo.JsUrl != null && proginfo.JsUrl != undefined  && proginfo.JsUrl.trim() != '') {
+                        //$.getScript("../js/Lib/" + proginfo.JsUrl);
+                        //document.write("<script src='../js/Lib/"+proginfo.JsUrl+"'><\/script>")
+                        //loadScript('../js/Lib/' + proginfo.JsUrl + '', function () {
+                        //    //alert('jiazai success');
+                        //});
+                        //$('body').load('../pages/'+proginfo.progPackage+'/' + proginfo.JsUrl + '');
+                        LoadPage('../pages/' + proginfo.progPackage + '/' + proginfo.JsUrl + '', function (response) {
+                            //alert(response);
+                            $('body').append(response);
+                        });
+                    }
+                }
+                //layer.msg('您的航班价格已变动，请返回重新选择航班！', { icon:6, time: 5000, shade: [0.3, '#000', true] });
+            },
+            error: function (msg) {
+                document.getElementById("appfuncbtngroups").remove();
+                //alert(msg.responseText);
+            }
+        });
+    }
+    function renderhtml(data) {
+        let dtfields = [];
+        let dttimes = []; 
+        proginfo = data.proginfo.ClientDataInfos[0].Datas;
+        let events = [];
+        if (!proginfo.HasAddbtn) {
+            $('#appbtnadd').hide();
+        }if (!proginfo.Haseditbtn) {
+            $('#appbtnedit').hide();
+        }if (!proginfo.Hasdeletebtn) {
+            $('#appbtndelete').hide();
+        }if (!proginfo.HasCopybtn) {
+            $('#appbtncopy').hide();
+        }if (!proginfo.HasSearchbtn) {
+            $('#appbtnsearch').hide();
+        }if (!proginfo.HasLogSearchbtn) {
+            $('#appbtnlogsearch').hide();
+        }
+        if (!proginfo.HasAddbtn && !proginfo.Haseditbtn && !proginfo.Hasdeletebtn && !proginfo.HasCopybtn) {
+            $('#appbtnsave').hide();
+        }
+        RenderTplHtml('proginfoTpl', 'appproginfos', proginfo, false);
+        if (proginfo.CustomPage != undefined && proginfo.CustomPage != null && proginfo.CustomPage.trim() != '') {
+
+            LoadPage('../pages/' + proginfo.progPackage + '/' + proginfo.CustomPage + '', function (response) {
+                //alert(response);
+                $('body').append(response);
+            });
+            $('#appfuncbtngroups').hide();
+            PageLoad(proginfo);
+            return;
+        }
+        data.controlinfos.ClientDataInfos[0].Datas.forEach(function (o) {
+            let ctrobj = o;
+            if (ctrobj.ControlType == 1) {
+                collaforms.push(new LibForms(ctrobj));
+                RenderTplHtml('collaTpl', 'apppagecontent', ctrobj, true);
+                data.fieldinfos.ClientDataInfos[0].Datas.forEach(function (f) {
+                    if (f.ID == ctrobj.ID) {
+                        if (!f.IsHide) {
+                            if (f.ElemType == 1 || f.ElemType == 9) {//singleinputTpl
+                                RenderTplHtml('singleinputTpl', ctrobj.ID, f, true);
+                            }
+                            else if (f.ElemType == 2) {//MultinputTpl
+                                RenderTplHtml('MultinputTpl', ctrobj.ID, f, true);
+                            }
+                            else if (f.ElemType == 4 || f.ElemType == 5) {//dateTpl
+                                RenderTplHtml('dateTpl', ctrobj.ID, f, true);
+                                if (f.ElemType == 4)
+                                    dtfields.push(f.ID + "_" + f.Field);
+                                else if (f.ElemType == 5) {
+                                    dttimes.push(f.ID + "_" + f.Field);
+                                }
+                            }
+                            else if (f.ElemType == 3) {//selectTpl
+                                RenderTplHtml('selectTpl', ctrobj.ID, f, true);
+                                form.render('select');
+                                getFieldOptions(ctrobj.ID, ctrobj.DataSourceNm, ctrobj.TableNm, f.Field);
+                            }
+                            else if (f.ElemType == 8) {//imgtpl
+                                RenderTplHtml('imgtpl', ctrobj.ID, f, true);
+                            }
+                            else if (f.ElemType == 10) {//searchinputTpl
+                                RenderTplHtml('searchinputTpl', ctrobj.ID, f, true);
+                                appsearchfields.push(f);
+                            }
+                            else if (f.ElemType == 6) {//checkboxTpl
+                                RenderTplHtml('checkboxTpl', ctrobj.ID, f, true);
+                                appchkboxs.push(f.Field);
+                            }
+
+                            //事件处理
+                            let esource = new LibEventSource();
+                            esource.ControlID = f.ID;
+                            esource.FieldNm = f.Field;
+                            escape.ElemType = f.ElemType;
+                            let handle = new LibEventHandle();
+                            handle.EventSource = esource;
+                            if (f.Onchange) {
+                                handle.EventType = 1;
+                                events.push(handle);
+                            }
+                            if (f.Onclick) {
+                                handle.EventType = 2;
+                                events.push(handle);
+                            }
+                            if (f.Onfocus) {
+                                handle.EventType = 3;
+                                events.push(handle);
+                            }
+                            if (f.Onblur) {
+                                handle.EventType = 4;
+                                events.push(handle);
+                            }
+                            if (f.OnKeydown) {
+                                handle.EventType = 5;
+                                events.push(handle);
+                            }
+
+                        }
+                    }
+                });
+
+                let ctrlelem = document.getElementById(ctrobj.ID);
+                ctrlelem.innerHTML = "<div class=\"layui-form-item\">" + ctrlelem.innerHTML + "</div>";
+            }
+            else if (ctrobj.ControlType == 2) {//grid控件
+                RenderTplHtml('collaTpl', 'apppagecontent', ctrobj, true);
+                RenderTplHtml('gridTpl', ctrobj.ID, ctrobj, true);
+                RenderTplHtml('appgrid_toolbarTpl', 'appgrid_toolcontainer', ctrobj, true);
+                let url = getUrl(proginfo.progPackage, proginfo.controllerNm, "BindDataGrid")
+                var gd = new appgrid(ctrobj.ID + "_gridvm");
+                //gd.$table.url = url + "?gridid = " + ctrobj.ID + "&ds=" + ctrobj.DataSourceNm + "&tbnm=" + ctrobj.TableNm;
+                gd.$table.url = url;
+                gd.$table.where = { gridid: ctrobj.ID, ds: ctrobj.DataSourceNm, tbnm: ctrobj.TableNm };
+                gd.$table.toolbarid = ctrobj.ID + "_toolbar";
+                gd.$table.title = ctrobj.Title;
+                gd.$table.isSimple = false;
+                gd.$table.totalRow = true;
+                let col;
+                //let btns = [];
+                data.fieldinfos.ClientDataInfos[0].Datas.forEach(function (f) {
+                    if (f.ID == ctrobj.ID && f.ElemType == -1) {
+                        let o = $('#' + gd.$table.toolbarid).children().first();
+                        DoRenderTplHtml('gridtoolbtnTpl', o[0], f, true);
+                        if (f.ClickFunc != undefined && f.ClickFunc != '')
+                            $('#' + f.Field).attr("onclick", "return " + f.ClickFunc);
+                        //$('#' + f.Field).click(function (e) {
+                        //    alert("kdkd");
+                        //});
+                    }
+                    else if (f.ID == ctrobj.ID && !f.IsHide) {
+                        gd.$fields.push(f);
+                        col = new gd.column(f.Field, f.Title);
+                        if (f.ElemType == 3) {//下拉选项类型的字段，需要将值转为对应的描述
+                            getFieldOptionOnly(ctrobj.DataSourceNm, ctrobj.TableNm, f.Field);
+                            //col.templet = '<div><a href="/detail/{{d.'+f.Field+'}}" class="layui-table-link">{{d.'+f.Title+'}}</a></div>';
+                            col.templet = function (d) {
+                                let result = '';
+                                appoptions.forEach(function (o) {
+                                    if (o.TableNm == ctrobj.TableNm && o.Field == f.Field) {
+                                        $.each(o.Options, function (i, v) {
+                                            if (v.key == d[f.Field])
+                                                result = v.value;
+                                        });
+                                    }
+                                });
+                                return result;
+                            }
+                        }
+                        gd.$table.columns.push(col);
+                    }
+                });
+                gd.initialTable();
+                grids.push(gd);
+            }
+            else if (ctrobj.ControlType == 3) {//btngroup控件
+                let btndatas = [];
+                data.fieldinfos.ClientDataInfos[0].Datas.forEach(function (f) {
+                    if (f.ID == ctrobj.ID) {
+                        btndatas.push(f);
+                    }
+                });
+                RenderTplHtml('btngroupTpl', 'apppagecontent', btndatas, true);
+            }
+
+        });
+        dtfields.forEach(function (dt) {
+            layui.laydate.render({
+                elem: '#' + dt
+                , format: 'yyyy-MM-dd'
+            });
+        });
+        dttimes.forEach(function (dt) {
+            layui.laydate.render({
+                elem: '#' + dt
+                , type: 'datetime'
+                , format: 'yyyy-MM-dd HH:mm:ss'
+            });
+        });
+        element.init();
+        PageLoad(proginfo);
+        events.forEach(function (eo) {
+            EventBind(eo);
+        });
+    }
+
+    function PageLoad(proginfo) {
+        let _url = proginfo.IsDeveloper ? getUrl(proginfo.progPackage, proginfo.controllerNm, "PageLoaded") : "/Users/PageLoaded";
+        $.ajax({
+            type: 'get',
+            url: _url,
+            data: {},
+            success: function (returndata) {
+                let data = returndata.ClientDatas;
+                if (data != null && data != undefined && data.length > 0) {
+                    data.forEach(function (d) {
+                        if (d.collas != null && d.collas != undefined && d.collas.length > 0) {
+                            d.collas.forEach(function (collasid) {
+                                form.val(collasid + "_" + d.TableNm, JSON.parse(JSON.stringify(d.ClientDataInfos[0].Datas)));
+                            });
+                        }
+
+                    });
+                }
+                grids.forEach(function (gd) {
+                    gd.refreshData();
+                });
+                if (returndata.Data == 4) {//Preview状态
+                    SetPageDisabled();
+                    $('#appbtnsave').attr("disabled", true);
+                    $('#appbtnsave').addClass("layui-disabled");
+                }
+                //alert("");
+                //renderhtml(response.data);
+                //layer.msg('您的航班价格已变动，请返回重新选择航班！', { icon:6, time: 5000, shade: [0.3, '#000', true] });
+            },
+            error: function (msg) {
+                //alert(msg.responseText);
+            }
+        });
+        collaforms.forEach(function (ctrl) {
+            let formbtn = ctrl.CtrlObj.ID + "_btnsubmit";
+            form.on('submit(' + formbtn + ')', function (data) {
+                collaforms.forEach(function (fm) {
+                    if (fm.CtrlObj.ID == ctrl.CtrlObj.ID) {
+                        fm.verifyPass = true;
+                        return false;
+                    }
+                });
+                let pass = true;
+                collaforms.forEach(function (fm) {
+                    if (!fm.verifyPass) pass = false;
+                });
+                if (pass && ctrl.CtrlObj.ID == collaforms[collaforms.length - 1].CtrlObj.ID) {
+                    doSubmit();
+                    //let clientdata = getClientDatas();
+                    //$.ajax({
+                    //    type: 'post',
+                    //    url: getUrl(proginfo.progPackage, proginfo.controllerNm, "Update"),
+                    //    data: JSON.stringify(clientdata),
+                    //    contentType: 'application/json; charset=utf-8',
+                    //    dataType: 'json',
+                    //    success: function (respon) {
+                    //        if (respon.IsSuccess) {
+                    //            SetPageDisabled();
+                    //            $('#appbtnsave').attr("disabled", true);
+                    //            $('#appbtnsave').addClass("layui-disabled");
+                    //        }
+                    //        //alert("success");
+                    //    },
+                    //    error: function (msg) {
+                    //        alert(msg.responseText);
+                    //    }
+                    //});
+                }
+                return false;
+            });
+        });
+    }
+
+    function getFieldOptions(ctrlid, ds, tbnm, fieldnm,renderOverEvent) {
+        $.ajax({
+            type: 'get',
+            url: '/AppSys/GetFieldOptions',
+            data: { dsnm: ds, tbnm: tbnm, fieldnm: fieldnm },
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            success: function (data) {
+                RenderTplHtml('fieldoptionTpl', ctrlid + '_' + fieldnm + '_option', data, false);
+                form.render('select');
+                let exist = false;
+                appoptions.forEach(function (o) {
+                    if (o.TableNm == tbnm && o.Field == fieldnm) {
+                        o.Options = data;
+                        exist = true;
+                        return false;
+                    }
+                });
+                if (!exist) {
+                    let v = new LibAppFieldOption();
+                    v.TableNm = tbnm;
+                    v.Field = fieldnm;
+                    v.Options = data;
+                    appoptions.push(v);
+                }
+                if (renderOverEvent != null && renderOverEvent != undefined)
+                    renderOverEvent();
+            },
+            error: function (msg) {
+                alert(msg.responseText);
+            }
+        });
+    }
+    function getFieldOptionOnly(ds, tbnm, fieldnm) {
+        $.ajax({
+            type: 'get',
+            url: '/AppSys/GetFieldOptions',
+            data: { dsnm: ds, tbnm: tbnm, fieldnm: fieldnm },
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            success: function (data) {
+                let exist = false;
+                appoptions.forEach(function (o) {
+                    if (o.TableNm == tbnm && o.Field == fieldnm) {
+                        o.Options = data;
+                        exist = true;
+                        return false;
+                    }
+                });
+                if (!exist) {
+                    let v = new LibAppFieldOption();
+                    v.TableNm = tbnm;
+                    v.Field = fieldnm;
+                    v.Options = data;
+                    appoptions.push(v);
+                }
+            },
+            error: function (msg) {
+                alert(msg.responseText);
+            }
+        });
+    }
+
+    function EventBind(ehandle) {
+        let etype;
+        if (ehandle.EventType == 1) {
+            etype = 'change';
+        }
+        if (ehandle.EventType == 2) {
+            etype = 'click';
+        }
+        if (ehandle.EventType == 3) {
+            etype = 'focus';
+        }
+        if (ehandle.EventType == 4) {
+            etype = 'blur';
+        }
+        if (ehandle.EventType == 5) {
+            etype = 'keydown';
+        }
+        $('#' + ehandle.EventSource.ControlID + "_" + ehandle.EventSource.FieldNm).bind(etype, function () {
+            ehandle.EventSource.FieldValue = this.value;
+            $.ajax({
+                type: 'post',
+                url: getUrl(proginfo.progPackage, proginfo.controllerNm, "AppEventProcess"),
+                data: JSON.stringify(ehandle),
+                success: function (respon) {
+                    let data = respon.ClientDatas;
+                    data.forEach(function (d) {
+                        d.collas.forEach(function (collaid) {
+                            form.val(collaid + "_" + d.TableNm, JSON.parse(JSON.stringify(d.ClientDataInfos[0].Datas)));
+                        });
+                    });
+                    grids.forEach(function (gd) {
+                        gd.refreshData();
+                    });
+                },
+                error: function (msg) {
+                    //alert(msg.responseText);
+                }
+            });
+        });
+    }
+
+    function Appsave() {
+        //let verity = false;
+        //let formnm = '';
+        let formbtn;
+        if (collaforms == null || collaforms == undefined || collaforms.length == 0) {
+            doSubmit();
+            return
+        }
+        collaforms.forEach(function (ctrl) {
+            formbtn = ctrl.CtrlObj.ID + "_btnsubmit";
+            $('#' + formbtn).trigger("click");
+
+        });
+    }
+
+    function AppAdd() {
+        $.ajax({
+            type: 'get',
+            url: getUrl(proginfo.progPackage, proginfo.controllerNm, "Add"),
+            data: {},
+            success: function (response) {
+                if (response.IsSuccess) {
+                    PageLoad(proginfo);
+                    RemovePageDisabled();
+                    $('#appbtnsave').attr("disabled", false);
+                    $('#appbtnsave').removeClass("layui-disabled");
+                }
+            },
+            error: function (msg) {
+                //alert(msg.responseText);
+            }
+        });
+    }
+
+    function AppEdit() {
+        $.ajax({
+            type: 'get',
+            url: getUrl(proginfo.progPackage, proginfo.controllerNm, "Edit"),
+            data: {},
+            success: function (response) {
+                if (response.IsSuccess) {
+                    //PageLoad(proginfo);
+                    RemovePageDisabled();
+                    $('#appbtnsave').attr("disabled", false);
+                    $('#appbtnsave').removeClass("layui-disabled");
+                }
+            },
+            error: function (msg) {
+                //alert(msg.responseText);
+            }
+        });
+    }
+
+    function AppDelete() {
+        appMessageBox("功能正在开发中。。。。。", 5);
+    }
+
+    //function AppRefresh() {
+    //    $.ajax({
+    //        type: 'get',
+    //        url: getUrl(proginfo.progPackage, proginfo.controllerNm, "Refresh"),
+    //        data: {},
+    //        success: function (response) {
+    //            if (response.IsSuccess) {
+    //                PageLoad(proginfo);
+    //                RemovePageDisabled();
+    //                $('#appbtnsave').attr("disabled", false);
+    //                $('#appbtnsave').removeClass("layui-disabled");
+    //            }
+    //        },
+    //        error: function (msg) {
+    //            //alert(msg.responseText);
+    //        }
+    //    });
+    //}
+    function getClientDatas() {
+        let clientdata = [], clientDataInfo;
+        collaforms.forEach(function (ctrl) {
+            let c = new LibClientDatas();
+            c.TableNm = ctrl.CtrlObj.TableNm;
+            c.DataSource = ctrl.CtrlObj.DataSourceNm;
+
+            clientDataInfo = new LibClientDataInfo();
+            clientDataInfo.ClientDataStatus = 1;
+            clientDataInfo.Datas = form.val(ctrl.CtrlObj.ID + "_" + ctrl.CtrlObj.TableNm);
+            let isexist = false;
+            appchkboxs.forEach(function (n) {
+                isexist = false;
+                $.each(clientDataInfo.Datas, function (n2, v) {
+                     if (n == n2) {
+                        isexist = true;
+                        return false
+                    }
+                });
+                if (!isexist) {
+                    clientDataInfo.Datas[n] = false;
+                }
+            });
+            c.ClientDataInfos.push(clientDataInfo);
+            clientdata.push(c);
+        });
+        return clientdata;
+    }
+
+    function btnSearchFromSourse(obj) {
+        let field = $(obj).attr("data-field");
+        let id = $(obj).attr("data-id");
+        $('#app_searchfieldid').val(id + "_" + field);
+        $('#appsearchdataview').html("");
+        let d = { index: 0, hasdelet: false };
+        RenderTplHtml("appSearchconditionTpl", "app_searchcondition", d, false);
+
+        searchfromdsindex=appComfirmBox('查询', 'app_searchModel', true, function () {
+
+            return true;
+        });
+        $("#app_searchflag").val("2");
+        $.ajax({
+            type: 'get',
+            url: getUrl(proginfo.progPackage, proginfo.controllerNm, "GetSearchFromSrcNm"),
+            data: {pgnm:proginfo.progNm, controlid: id, field: field },
+            success: function (response) {
+                if (response.IsSuccess) {
+                    $('#app_currsearchtbnm').val(response.Data.tbnm);
+                    $('#app_searchfromfield').val(response.Data.fromfield);
+                    $('#app_searchfromdesc').val(response.Data.desc);
+                    getSearchFields(response.Data.tbnm, 2);
+
+                    //PageLoad(proginfo);
+                    //RemovePageDisabled();
+                    //$('#appbtnsave').attr("disabled", false);
+                    //$('#appbtnsave').removeClass("layui-disabled");
+                }
+            },
+            error: function (msg) {
+            }
+        });
+    }
+
+    function searchlogdata() {
+        $.ajax({
+            type: 'get',
+            url: getUrl(proginfo.progPackage, proginfo.controllerNm, "SearchDataLogs"),
+            data: {},
+            success: function (response) {
+                //let tbs = [];
+                RenderTplHtml("appdatalogcontenTpl", "appdatalog_Model",  response.ClientDatas, false);
+                response.ClientDatas.forEach(function (o) {
+                    var gd = new appgrid(o.TableNm + "_loggrid");
+                    //gd.$table.url = "/AppSys/BindDataGrid";
+                    gd.$table.toolbarid = "";
+                    gd.$table.title = "";
+                    gd.$table.isSimple = false;
+                    gd.$table.height = 400;
+                    let dt;
+                    o.ClientDataInfos.forEach(function (row) {
+                        dt = JSON.parse(row.Datas.Datajson);
+                        dt.Action = row.Datas.Action;
+                        dt.UserId = row.Datas.UserId;
+                        dt.IP = row.Datas.IP;
+                        dt.DT = row.Datas.DT;
+                        gd.$table.data.push(dt);
+                    });
+
+                    let col = new gd.column('Action', '操作');
+                    //col.fixed = 'left';
+                    col.templet = function (d) {
+                        if (d.Action == 1)
+                            return '新增';
+                        else if (d.Action == 2)
+                            return '修改';
+                        else
+                            return d.Action;
+                    }
+                    gd.$table.columns.push(col);
+                    col = new gd.column('UserId', '操作者');
+                    //col.fixed = 'left';
+                    gd.$table.columns.push(col);
+                    col = new gd.column('IP', 'IP地址');
+                    //col.fixed = 'left';
+                    gd.$table.columns.push(col);
+                    col = new gd.column('DT', '操作日期');
+                    //col.fixed = 'left';
+                    gd.$table.columns.push(col);
+                    $.each(dt, function (n, v) {
+                        if (n != 'Action' && n != 'UserId' && n != 'IP' && n != 'DT'
+                            && n != 'app_logid' && n != 'LAY_CHECKED'&& n != 'LibModelStatus') {
+                            col = new gd.column(n, n);
+                            gd.$table.columns.push(col);
+                        }
+                    });
+                    gd.initialTable();
+                });
+            },
+            error: function (msg) {
+                document.getElementById("appfuncbtngroups").remove();
+                //alert(msg.responseText);
+            }
+        });
+        appComfirmBox('数据日志', 'appdatalog_Model', true, function () {
+            return true;
+        });
+    }
+
+    function doSubmit() {
+        let clientdata = getClientDatas();
+        $.ajax({
+            type: 'post',
+            url: getUrl(proginfo.progPackage, proginfo.controllerNm, "Update"),
+            data: JSON.stringify(clientdata),
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            success: function (respon) {
+                if (respon.IsSuccess) {
+                    SetPageDisabled();
+                    $('#appbtnsave').attr("disabled", true);
+                    $('#appbtnsave').addClass("layui-disabled");
+                }
+                //alert("success");
+            },
+            error: function (msg) {
+                alert(msg.responseText);
+            }
+        });
+    }
+
+</script>
+<!--查询功能-->
+<script>
+    var fmcout = 0;
+    var appoptionsfields = [];
+    //var currtbnm = '';
+    function getsearchmodel() {
+        $('#appsearchdataview').html("");
+        let d = { index: 0, hasdelet: false };
+        RenderTplHtml("appSearchconditionTpl", "app_searchcondition", d, false);
+        $('#app_currsearchtbnm').val('');
+        getSearchFields('', 1);
+        appComfirmBox('查询', 'app_searchModel', true, function () {
+            return true;
+        });
+        $("#app_searchflag").val("1");
+    }
+    //flag 1 标识功能搜索，2 标识来源主数据搜索
+    function getSearchFields(tbnm, flag) {
+        $.ajax({
+            type: 'get',
+            url: getUrl(proginfo.progPackage, proginfo.controllerNm, "GetSearchfieldandsymbol"),
+            data: { tbnm: tbnm, flag: flag },
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            success: function (returndata) {
+                appoptionsfields = returndata.Data.optionfields;
+                returndata.Data.fields.forEach(function (o) {
+                    o.key = o.fieldNm;
+                    o.value = o.fieldDesc;
+                    //if (o.fieldType == 5) {
+
+                    //}
+                });
+                RenderTplHtml('fieldoptionTpl2', 'appsearchfield0', returndata.Data.fields, false);
+                RenderTplHtml('fieldoptionTpl', 'appsearchsymbol0', returndata.Data.symbol, false);
+                RenderTplHtml('fieldoptionTpl', 'appsearchlogic0', returndata.Data.logic, false);
+                form.render('select');
+            },
+            error: function (msg) {
+                //alert(msg.responseText);
+            }
+        });
+    }
+    function addsearchcond() {
+        fmcout += 1;
+        let d = { index: fmcout, hasdelet: true };
+        RenderTplHtml("appSearchconditionTpl", "app_searchcondition", d, true);
+        document.getElementById("appsearchfield" + fmcout).innerHTML = document.getElementById("appsearchfield0").innerHTML;
+        document.getElementById("appsearchsymbol" + fmcout).innerHTML = document.getElementById("appsearchsymbol0").innerHTML;
+        document.getElementById("appsearchlogic" + fmcout).innerHTML = document.getElementById("appsearchlogic0").innerHTML;
+        form.render('select');
+        //let fm = document.createElement("form");
+        //fmcout += 1;
+        //fm.id = "appsearchcondform" + fmcout;
+        //fm.setAttribute("class", "layui-form");
+        //fm.setAttribute("lay-filter", fm.id);
+        //let cond = document.getElementById("firscondform");
+        //fm.innerHTML = cond.innerHTML;
+        //document.getElementById("app_searchcondition").append(fm);
+        //form.render('select');
+    }
+    function deletesearchcond(obj) {
+        let index = $(obj).attr("data-index");
+        document.getElementById("searchcondform" + index).remove();
+    }
+
+    function searchdata() {
+        let fmdata = [];
+        let conds = document.getElementById("app_searchcondition").children;
+        $.each(conds, function (i, o) {
+            let nm = $(o).attr("lay-filter");
+            let fmdt = form.val(nm);
+            if (fmdt.searchfield != '' && fmdt.searchfield != undefined) {
+                let dt = new LibSearchConditon();
+                dt.FieldNm = fmdt.searchfield;
+                dt.Symbol = parseInt(fmdt.searchsymbol);
+                dt.valu1 = fmdt.modelvalu1;
+                dt.valu2 = fmdt.modelvalu2;
+                dt.Logic = parseInt(fmdt.searchlogic);
+                fmdata.push(dt);
+            }
+        });
+        $.ajax({
+            type: 'post',
+            url: getUrl(proginfo.progPackage, proginfo.controllerNm, "SearchData"),
+            data: JSON.stringify(fmdata),
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            success: function (returndata) {
+                if (returndata.IsSuccess) {
+                    let flag = $("#app_searchflag").val();
+                    let ctrobj = { ID: "appsearchdatagrid", title: "" }
+                    RenderTplHtml('gridTpl', 'appsearchdataview', ctrobj, false);
+                    let url = getUrl(proginfo.progPackage, proginfo.controllerNm, "BindSearchDataGrid")
+                    var gd = new appgrid(ctrobj.ID + "_gridvm");
+                    gd.$table.url = url;
+                    gd.$table.where = { tbnm: $('#app_currsearchtbnm').val(), kind: flag };
+                    gd.$table.toolbarid = "";
+                    gd.$table.title = ctrobj.title;
+                    gd.$table.isSimple = false;
+                    gd.$table.totalRow = true;
+                    let col;
+                    let cols = document.getElementById('appsearchfield0').children;
+                    $.each(cols, function (i, c) {
+                        let hide = $(c).attr("data-hidden");
+                        if ($(c).val().trim() != '' && $(c).val() != undefined && ((hide == undefined) || (hide != undefined && hide == "false"))) {
+                            col = new gd.column($(c).val(), $(c).text());
+                            $.each(appoptionsfields, function (n, v) {
+                                if (n == col.field) {
+                                    col.templet = function (d) {
+                                        let result = '';
+                                        $.each(d, function (n2, v2) {
+                                            if (n2 == n) {
+                                                $.each(v, function (i, o) {
+                                                    if (o.key == v2) {
+                                                        result = o.value;
+                                                    }
+                                                });
+                                            }
+                                        });
+                                        return result;
+                                    }
+                                }
+                            });
+                            gd.$table.columns.push(col);
+                        }
+                    });
+                    gd.initialTable();
+                    gd.DbClick = function (row) {
+                        if (flag == "1") {//功能菜单的搜索
+                            GetSelectData(row);
+                            layer.closeAll();
+                        }
+                        else if (flag == "2") {//来源主数据搜索
+                            let fieldid = $('#app_searchfieldid').val();
+                            let fromfield = $('#app_searchfromfield').val();
+                            let fromdescfield = $('#app_searchfromdesc').val();
+                            $.each(row.data, function (nm, v) {
+                                if (nm.toUpperCase() == fromfield.toUpperCase()) {
+                                    $('#' + fieldid).val(v);
+                                }
+                                if (nm.toUpperCase() == fromdescfield.toUpperCase()) {
+                                    $('#' + fieldid + "_desc").text(v);
+                                }
+                            });
+                            appsearchfields.forEach(function (f) {
+                                if (f.ID + "_" + f.Field == fieldid) {
+                                    if (f.RelateFieldExpress != undefined && f.RelateFieldExpress != null && f.RelateFieldExpress.trim() != '') {
+                                        let expresslist = f.RelateFieldExpress.split(';'); 
+                                        $.each(expresslist, function (i, exp) {
+                                            if (exp.indexOf("SetValueFromSource(") != -1) {
+                                                let v = getsmallBracketStr(exp);
+                                                let v2 = v.split(',');
+                                                $.each(row.data, function (nm, v) {
+                                                    if (nm.toUpperCase() == v2[0].replace(/\"/g, "").toUpperCase()) {
+                                                        $('#' + f.ID + "_" + v2[1].replace(/\"/g,"")).val(v);
+                                                    }
+                                                });
+                                            }
+                                        });
+                                    }
+                                }
+                            });
+                            layer.close(searchfromdsindex);
+                        }
+                    }
+
+                }
+            },
+            error: function (msg) {
+            }
+        });
+    }
+
+    function GetSelectData(row) {
+        $.ajax({
+            type: 'post',
+            url: getUrl(proginfo.progPackage, proginfo.controllerNm, "FillSearchData"),
+            data: JSON.stringify(row.data),
+            success: function (response) {
+                if (response.IsSuccess) {
+                    PageLoad(proginfo);
+                    SetPageDisabled();
+                    $('#appbtnsave').attr("disabled", false);
+                    $('#appbtnsave').removeClass("layui-disabled");
+                }
+            },
+            error: function (msg) {
+                //alert(msg.responseText);
+            }
+        });
+    }
+</script>
+<script>
+    //function test() { alert("kkkk"); }
+</script>
+<script id="proginfoTpl" type="text/html">
+    <input id="app_progNm" type="hidden" name="prog" value="{{ d.progNm }}" />
+    <input type="hidden" name="progdesc" value="{{ d.progDesc }}" />
+    <input id="app_progpackage" type="hidden" name="progPackage" value="{{ d.progPackage }}" />
+    <input id="app_controllerNm" type="hidden" name="controllerNm" value="{{ d.controllerNm }}" />
+    <!--<input id="appformverfypass" type="hidden" name="appformverfypass"/>-->
+</script>
+<!--面板元素-->
+<script id="collaTpl" type="text/html">
+    <form class="layui-form" action="" lay-filter="{{ d.ID }}_{{ d.TableNm }}">
+        <!--<input type="hidden"  name="prog" value="{{ d.ProgNm }}"/>-->
+        <div class="layui-collapse">
+            <div class="layui-colla-item">
+                <h2 class="layui-colla-title">{{ d.Title }}</h2>
+                <div id="{{ d.ID }}" class="layui-colla-content layui-show">
+
+                </div>
+            </div>
+        </div>
+        <button id="{{ d.ID }}_btnsubmit" type="submit" class="layui-btn" lay-submit="" lay-filter="{{ d.ID }}_btnsubmit" style="display:none">立即提交</button>
+    </form>
+</script>
+<script id="gridTpl" type="text/html">
+    <table class="layui-hide" id="{{ d.ID }}_gridvm" lay-filter="{{ d.ID }}_gridvm"></table>
+</script>
+<script type="text/html" id="appgrid_toolbarTpl">
+    <div id="{{ d.ID }}_toolbar" class="layui-btn-container">
+        <div class="layui-btn-group">
+            <button class="layui-btn layui-btn-sm layui-icon layui-icon-add-1" title="新增" data-gridid="{{ d.ID }}" data-ds="{{ d.DataSourceNm }}" data-tbnm="{{ d.TableNm }}" onclick="return grid_add(this)"></button>
+            <button class="layui-btn layui-btn-sm layui-icon layui-icon-edit" title="编辑" data-gridid="{{ d.ID }}" data-ds="{{ d.DataSourceNm }}" data-tbnm="{{ d.TableNm }}" onclick="return grid_edit(this)"></button>
+            <button class="layui-btn layui-btn-sm layui-icon layui-icon-delete" title="删除" data-gridid="{{ d.ID }}" data-ds="{{ d.DataSourceNm }}" data-tbnm="{{ d.TableNm }}" onclick="return grid_delete(this)"></button>
+            <button class="layui-btn layui-btn-sm layui-icon layui-icon-file" title="复制行项" data-gridid="{{ d.ID }}" data-ds="{{ d.DataSourceNm }}" data-tbnm="{{ d.TableNm }}" onclick="return grid_copy(this)"></button>
+        </div>
+    </div>
+</script>
+<!--单行文本元素-->
+<script id="singleinputTpl" type="text/html">
+    {{# if(d.IsOnline){}}
+    <div class="layui-form-item">
+        <label class="layui-form-label">{{ d.Title }}</label>
+        <div class="layui-input-block">
+            <input id="{{ d.ID }}_{{ d.Field }}" type="{{# if(d.ElemType==9){}}password{{# }else{ }} text{{# } }}" name="{{ d.Field }}" {{# if(d.IsNumber){}} oninput="value=value.replace(/^\D*(\d*(?:\.\d{0,3})?).*$/g, '$1')" {{# } }} lay-verify="{{# if(d.IsRequired){ }}required{{# } }}" lay-reqtext="必填"
+                   autocomplete="off" placeholder="{{ d.Field }}" {{# if(d.OnlyRead){ }} readonly {{# } }} class="layui-input {{# if(d.OnlyRead){ }}layui-disabled{{# } }}">
+        </div>
+    </div>
+    {{# } else{ }}
+    <div class="layui-inline">
+        <label class="layui-form-label">{{ d.Title }}</label>
+        <div class="layui-input-block">
+            <input id="{{ d.ID }}_{{ d.Field }}" type="{{# if(d.ElemType==9){}}password{{# }else{ }} text{{# } }}" name="{{ d.Field }}" {{# if(d.IsNumber){}} oninput="value=value.replace(/^\D*(\d*(?:\.\d{0,3})?).*$/g, '$1')" {{# } }} lay-verify="{{# if(d.IsRequired){ }}required{{# } }}" autocomplete="off"
+                   placeholder="{{ d.Field }}" {{# if(d.OnlyRead){ }} readonly {{# } }} class="layui-input {{# if(d.OnlyRead){ }}layui-disabled{{# } }}">
+        </div>
+    </div>
+    {{# } }}
+
+</script>
+<!--多行文本元素-->
+<script id="MultinputTpl" type="text/html">
+    <div class="layui-form-item layui-form-text">
+        <label class="layui-form-label">{{ d.Title }}</label>
+        <div class="layui-input-block">
+            <textarea id="{{ d.ID }}_{{ d.Field }}" lay-verify="{{# if(d.IsRequired){ }}required{{# } }}" placeholder="请输入内容" {{# if(d.OnlyRead){ }} readonly {{# } }}
+                      class="layui-textarea {{# if(d.OnlyRead){ }}layui-disabled{{# } }}" name="{{ d.Field }}"></textarea>
+        </div>
+    </div>
+</script>
+<!--日期元素-->
+<script id="dateTpl" type="text/html">
+    {{# if(d.IsOnline){}}
+    <div class="layui-form-item">
+        <label class="layui-form-label">{{ d.Title }}</label>
+        <div class="layui-input-block">
+            <input id="{{ d.ID }}_{{ d.Field }}" type="text" name="{{ d.Field }}" lay-verify="{{# if(d.ElemType==4){ }}date{{# }else{ }}datetime{{# } }}"
+                   autocomplete="off" {{# if(d.OnlyRead){ }} readonly {{# } }} class="layui-input {{# if(d.OnlyRead){ }}layui-disabled{{# } }}">
+        </div>
+    </div>
+    {{# } else { }}
+    <div class="layui-inline">
+        <label class="layui-form-label">{{ d.Title }}</label>
+        <div class="layui-input-block">
+            <input id="{{ d.ID }}_{{ d.Field }}" type="text" name="{{ d.Field }}" lay-verify="{{# if(d.ElemType==4){ }}date{{# }else{ }}datetime{{# } }}"
+                   autocomplete="off" {{# if(d.OnlyRead){ }} readonly {{# } }} class="layui-input {{# if(d.OnlyRead){ }}layui-disabled{{# } }}">
+        </div>
+    </div>
+    {{# } }}
+</script>
+
+<!--下拉选项元素-->
+<script id="selectTpl" type="text/html">
+    {{# if(d.IsOnline){}}
+    <div class="layui-form-item">
+        <label class="layui-form-label">{{ d.Title }}</label>
+        <div class="layui-input-block">
+            <select id="{{ d.ID }}_{{ d.Field }}_option" name="{{ d.Field }}" lay-verify="{{# if(d.IsRequired){ }}required{{# } }}" lay-filter="{{ d.Field }}">
+            </select>
+        </div>
+    </div>
+    {{# } else { }}
+    <div class="layui-inline">
+        <label class="layui-form-label">{{ d.Title}}</label>
+        <div class="layui-input-block">
+            <select id="{{ d.ID }}_{{ d.Field }}_option" name="{{ d.Field }}" lay-verify="{{# if(d.IsRequired){ }}required{{# } }}" lay-filter="{{ d.Field }}">
+            </select>
+        </div>
+    </div>
+    {{# } }}
+</script>
+<!--下拉选项列表-->
+<script id="fieldoptionTpl" type="text/html">
+    <!--<option value=""></option>-->
+    {{# for(var i = 0; i < d.length; i++){ }}
+    <option value="{{ d[i].key }}">{{ d[i].value }}</option>
+    {{# } }}
+</script>
+
+<!--图片上控件-->
+<script id="imgtpl" type="text/html">
+    <div class="container">
+        <img id="app_img_{{d.Field}}" src="/images/0.jpg" class="img-responsive" data-id="{{d.Field}}" onclick="ShowImgFile(this)" style="cursor:pointer" alt="Cinque Terre" width="200" height="200" />
+        <input type="file" id="{{d.Field}}" name="{{d.Field}}" style="display:none" accept="image/*" onchange="LoadImgToUI(this)" />
+    </div>
+</script>
+
+<!--复选框控件-->
+<script id="checkboxTpl" type="text/html">
+    {{# if(d.IsOnline){}}
+    <div class="layui-form-item">
+        <label class="layui-form-label">{{ d.Title }}</label>
+        <div class="layui-input-block">
+            <input id="{{ d.ID }}_{{ d.Field }}" type="checkbox" name=" {{ d.Field }}" lay-skin="switch" lay-verify="{{ d.Field }}" lay-text="是|否">
+        </div>
+    </div>
+    {{# } else { }}
+    <div class="layui-inline">
+        <label class="layui-form-label">{{ d.Title }}</label>
+        <div class="layui-input-block">
+            <input id="{{ d.ID }}_{{ d.Field }}"  type="checkbox" name=" {{ d.Field }}" lay-skin="switch" lay-verify="{{ d.Field }}" lay-text="是|否">
+        </div>
+    </div>
+    {{# } }}
+</script>
+
+<!--按钮元素-->
+<script id="btnTpl" type="text/html">
+    <button type="button" class="layui-btn">按钮1</button>
+</script>
+
+<!--表格工具栏按钮元素-->
+<script id="gridtoolbtnTpl" type="text/html">
+    <button id="{{ d.Field }}" type="button" class="layui-btn layui-btn-sm">{{ d.Title }}</button>
+</script>
+
+<!--按钮组元素-->
+<script id="btngroupTpl" type="text/html">
+    <div class="layui-btn-container">
+        {{# for(var i = 0; i < d.length; i++){ }}
+        <button id="{{ d[i].Field }}" type="button" class="layui-btn">{{ d[i].Title }}</button>
+        {{# } }}
+    </div>
+</script>
+
+<!--搜索控件元素-->
+<script id="searchinputTpl" type="text/html">
+    {{# if(d.IsOnline){}}
+    <div class="layui-form-item">
+        <label class="layui-form-label">{{ d.Title }}</label>
+        <div class="layui-input-block">
+            <input id="{{ d.ID }}_{{ d.Field }}" type="text" name="{{ d.Field }}" lay-verify="{{# if(d.IsRequired){ }}required{{# } }}" lay-reqtext="必填"
+                   autocomplete="off" placeholder="{{ d.Field }}" {{# if(d.OnlyRead){ }} readonly {{# } }} class="layui-input {{# if(d.OnlyRead){ }}layui-disabled{{# } }}">
+           <a id="{{ d.ID }}_{{ d.Field }}_desc" href="#">来源描述、备注等</a>
+        </div>
+        <button type="button" class="layui-btn layui-icon layui-icon-search"
+                data-field="{{ d.Field }}" data-id="{{ d.ID }}" onclick="btnSearchFromSourse(this)"></button>
+    </div>
+    {{# } else{ }}
+    <div class="layui-inline">
+        <label class="layui-form-label">{{ d.Title }}</label>
+        <div class="layui-input-inline">
+            <input id="{{ d.ID }}_{{ d.Field }}" type="text" name="{{ d.Field }}"
+                   lay-verify="{{# if(d.IsRequired){ }}required{{# } }}" autocomplete="off"
+                   placeholder="{{ d.Field }}" {{# if(d.OnlyRead){ }} readonly {{# } }} class="layui-input {{# if(d.OnlyRead){ }}layui-disabled{{# } }}">
+            <a id="{{ d.ID }}_{{ d.Field }}_desc" href="#" target="_blank">来源描述、备注等</a>
+        </div>
+            <button type="button" class="layui-btn layui-icon layui-icon-search" style="margin-left:0px;"
+                    data-field="{{ d.Field }}" data-id="{{ d.ID }}" onclick="btnSearchFromSourse(this)"></button>
+            
+    </div>
+    {{# } }}
+
+</script>
+
+<!--数据日志控件模板-->
+<script id="appdatalogcontenTpl" type="text/html">
+    <div class="layui-tab layui-tab-brief" lay-filter="appdatalogmodel">
+        <div>
+            <ul class="layui-tab-title">
+                {{# for(var i = 0; i < d.length; i++){}}
+                <li {{# if(i==0){}} class="layui-this" {{# } }}>{{ d[i].TableNm }}</li>
+                {{# } }}
+            </ul>
+        </div>
+        <div class="layui-tab-content">
+            {{# for(var i = 0; i < d.length; i++){}}
+            <div class="layui-tab-item {{# if(i==0){}} layui-show {{# } }}">
+                <table class="layui-hide" id="{{ d[i].TableNm }}_loggrid" lay-filter=""></table>
+            </div>
+            {{# } }}
+        </div>
+    </div>
+</script>
+
+
+<script id="fieldoptionTpl2" type="text/html">
+    <option value=""></option>
+    {{# for(var i = 0; i < d.length; i++){ }}
+    <option {{# if(d[i].disabled){ }} disabled=""{{# } }} data-hidden="{{ d[i].hidden}}"  value="{{ d[i].key }}">{{ d[i].value }}</option>
+    {{# } }}
+</script>
+<script id="applogidTpl" type="text/html">
+    <input type="hidden" name="{{ d.Field }}" />
+</script>
+<script id="appSearchconditionTpl" type="text/html">
+    <form id="searchcondform{{ d.index }}" class="layui-form" action="" lay-filter="appsearchcondform{{ d.index }}">
+        <div class="layui-form-item">
+            <label class="layui-inline">
+                字段：
+            </label>
+            <div class="layui-inline">
+                <select id="appsearchfield{{ d.index }}" name="searchfield" lay-verify="required" lay-filter="appsearchfield">
+                </select>
+            </div>
+            <div class="layui-inline">
+                <select id="appsearchsymbol{{ d.index }}" name="searchsymbol" lay-verify="required" lay-filter="appsearchsymbol">
+                </select>
+            </div>
+            <div class="layui-inline">
+                <input type="text" name="modelvalu1" lay-verify="required" placeholder="" autocomplete="off" class="layui-input">
+            </div>
+            <div class="layui-inline">
+                <input type="text" name="modelvalu2" lay-verify="required" placeholder="" autocomplete="off" class="layui-input">
+            </div>
+            <div class="layui-inline">
+                <select id="appsearchlogic{{ d.index }}" name="searchlogic" lay-verify="required" lay-filter="appsearchlogic">
+                </select>
+            </div>
+            <div class="layui-inline">
+                <button type="button" class="layui-icon layui-icon-addition" onclick="addsearchcond()"></button>
+            </div>
+            {{# if(d.hasdelet){}}
+            <div class="layui-inline">
+                <button type="button" data-index="{{ d.index }}" class="layui-icon layui-icon-subtraction" onclick="deletesearchcond(this)"></button>
+            </div>
+            {{# } }}
+        </div>
+    </form>
+</script>

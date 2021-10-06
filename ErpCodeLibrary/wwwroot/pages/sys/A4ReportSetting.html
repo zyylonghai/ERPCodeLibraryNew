@@ -1,0 +1,950 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>zyy报表测试</title>
+    <link href="../../css/okadmin.css" rel="stylesheet" />
+    <script src="../../lib/jquery/dist/jquery.js"></script>
+    <script src="../../lib/layui/layui.js"></script>
+    <script src="../../js/Controls.js"></script>
+    <script src="../../js/pageDesign.js"></script>
+    <script src="../../js/gridview.js"></script>
+    <script src="../../js/appcom.js"></script>
+    <style>
+        .formcanvasrow {
+            border-top-width: 1px;
+            border-top-style: solid;
+            border-top-color: black;
+            border-bottom-width: 1px;
+            border-bottom-style: solid;
+            border-bottom-color: black;
+            border-left-width: 1px;
+            border-left-style: solid;
+            border-left-color: black;
+            border-right-width: 0px;
+            border-right-style: solid;
+            border-right-color: black;
+        }
+
+        .formcanvasrow2 {
+            border-top-width: 0px;
+            border-top-style: solid;
+            border-top-color: black;
+            border-bottom-width: 1px;
+            border-bottom-style: solid;
+            border-bottom-color: black;
+            border-left-width: 1px;
+            border-left-style: solid;
+            border-left-color: black;
+            border-right-width: 0px;
+            border-right-style: solid;
+            border-right-color: black;
+        }
+
+        .formcanvascol {
+            border-top-width: 0px;
+            border-top-style: solid;
+            border-top-color: black;
+            border-bottom-width: 0px;
+            border-bottom-style: solid;
+            border-bottom-color: black;
+            border-left-width: 0px;
+            border-left-style: solid;
+            border-left-color: black;
+            border-right-width: 1px;
+            border-right-style: solid;
+            border-right-color: black;
+        }
+
+        .rowcol {
+            font-size: 12px;
+            width: 73px;
+            height: 30px;
+            text-align: left;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-btn-container">
+        <div class="layui-btn-group">
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-ok-circle" onclick="rptsave()">保存</button>
+            <button class="layui-btn-primary layui-btn-sm   layui-icon layui-icon-table" onclick="AddTable()">添加表格</button>
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-table" onclick="AddGrid()">添加Grid</button>
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-radio" onclick="merge()">合并</button>
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-radio" onclick="tableinfo()">表格属性</button>
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-radio" onclick="columninfo()">单元格属性</button>
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-layer" onclick="rptinfo()">报表属性</button>
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-edit" onclick="insertRow()">插入行</button>
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-edit" onclick="insertColumn()">插入列</button>
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-edit" onclick="transverse()">横向布局</button>
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-edit" onclick="longitudinal()">纵向布局</button>
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-edit" onclick="preview()">打印预览</button>
+        </div>
+    </div>
+    <div style="height:5px;">
+
+    </div>
+    <!--startprint-->
+    <div class="layui-main" style="width:592px;height:842px;background-color:beige">
+        <div id="formdesigncanvas" style="align-content:center;">
+        </div>
+    </div>
+    <!--endprint-->
+    <div id="rptColinfo" style="display:none">
+        <div class="layui-tab layui-tab-brief" lay-filter="rptColinfo">
+            <div>
+                <ul class="layui-tab-title">
+                    <li class="layui-this" lay-id="baseattrtab">基本属性设置</li>
+                    <!--<li lay-id="datasourcetab">数据源设置</li>-->
+                </ul>
+            </div>
+            <div class="layui-tab-content">
+                <div class="layui-tab-item layui-show">
+                    <form class="layui-form" action="" lay-filter="StyleSetting">
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">ID</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="ID" required lay-verify="required" readonly placeholder="请输入id" autocomplete="off" class="layui-input layui-disabled">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">固定文本</label>
+                            <div class="layui-input-inline">
+                                <input type="checkbox" checked="" name="fixedtext" lay-skin="switch" lay-filter="fixedtext" lay-text="是|否">
+                            </div>
+                            <label class="layui-form-label">文本内容：</label>
+                            <div class="layui-input-inline">
+                                <input type="text" name="labeltext" required lay-verify="required" placeholder="请输入文本" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">来源数据</label>
+                            <div class="layui-input-inline">
+                                <input type="checkbox" checked="" name="fromdata" lay-skin="switch" lay-filter="fromdata" lay-text="是|否">
+                            </div>
+                            <label class="layui-form-label">绑定的字段：</label>
+                            <div class="layui-input-inline">
+                                <select id="fromfield" name="fromfield" lay-verify="required" lay-filter="fromfield">
+                                    <option value=""></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">水平对齐</label>
+                            <div class="layui-input-inline">
+                                <select id="horizontalalign" name="horizontalalign" lay-verify="required" lay-filter="horizontalalign">
+                                    <option value="left">左对齐</option>
+                                    <option value="right">右对齐</option>
+                                    <option value="center">居中对齐</option>
+                                </select>
+                            </div>
+                            <label class="layui-form-label">垂直对齐</label>
+                            <div class="layui-input-inline">
+                                <select id="verticalalign" name="verticalalign" lay-verify="required" lay-filter="verticalalign">
+                                    <option value="top">顶部对齐</option>
+                                    <option value="middle">居中对齐</option>
+                                    <option value="bottom">底部对齐</option>
+                                </select>
+                            </div>
+                            <label class="layui-form-label">字体大小</label>
+                            <div class="layui-input-inline">
+                                <input type="text" name="fontsize" required lay-verify="required" placeholder="" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">背景色</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="backgroupcolor" required lay-verify="required" placeholder="请输入色值" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="rptTableinfo" style="display:none">
+        <div class="layui-tab layui-tab-brief" lay-filter="rptTableinfo">
+            <div>
+                <ul class="layui-tab-title">
+                    <li class="layui-this" lay-id="baseattrtab">基本属性设置</li>
+                    <!--<li lay-id="datasourcetab">数据源设置</li>-->
+                </ul>
+            </div>
+            <div class="layui-tab-content">
+                <div class="layui-tab-item layui-show">
+                    <form class="layui-form" action="" lay-filter="TableInfoSetting">
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">ID</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="ID" required lay-verify="required" readonly placeholder="请输入id" autocomplete="off" class="layui-input layui-disabled">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <div class="layui-inline">
+                                <label class="layui-form-label">数据源</label>
+                                <div class="layui-input-block">
+                                    <select id="DataSource" name="DataSourceNm" lay-verify="required" lay-filter="DataSourceNm">
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="layui-inline">
+                                <label class="layui-form-label">数据表</label>
+                                <div class="layui-input-block">
+                                    <select id="TableInfo" name="TableNm" lay-verify="required" lay-filter="TableNm">
+                                        <option value=""></option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--<div id="rptTableinfo2" style="display:none">
+        <div class="layui-tab layui-tab-brief" lay-filter="rptTableinfo2">
+            <div>
+                <ul class="layui-tab-title">
+                    <li class="layui-this" lay-id="baseattrtab">基本属性设置</li>
+                </ul>
+            </div>
+            <div class="layui-tab-content">
+                <div class="layui-tab-item layui-show">
+                    <form class="layui-form" action="" lay-filter="TableInfoSetting2">
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">ID</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="ID" required lay-verify="required" readonly placeholder="请输入id" autocomplete="off" class="layui-input layui-disabled">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>-->
+    <div id="rptinfo" style="display:none">
+        <form class="layui-form" action="" lay-filter="progform">
+            <div class="layui-tab layui-tab-brief" lay-filter="proginfoTabBrief">
+                <div>
+                    <ul class="layui-tab-title">
+                        <li class="layui-this">基本信息</li>
+                    </ul>
+                </div>
+                <div class="layui-tab-content">
+                    <div class="layui-tab-item layui-show">
+                        <!--<div class="layui-main">-->
+                        <div class="layui-form-item">
+                            <div class="layui-inline">
+                                <label class="layui-form-label">功能名称：</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="progNm" lay-verify="required" lay-reqtext="功能名称是必填项" placeholder="请输入功能名称" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <!--<div class="layui-inline">-->
+                            <label class="layui-form-label">功能描述：</label>
+                            <div class="layui-input-block">
+                                <!--<textarea placeholder="请输入内容" class="layui-textarea" name="progDesc"></textarea>-->
+                                <input type="text" name="progDesc" lay-verify="required" lay-reqtext="功能描述是必填项" placeholder="请输入功能描述" autocomplete="off" class="layui-input">
+                            </div>
+                            <!--</div>-->
+                        </div>
+                        <div class="layui-form-item">
+                            <!--<div class="layui-inline">-->
+                            <label class="layui-form-label">API名称：</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="controllerNm" placeholder="请输入API名称" autocomplete="off" class="layui-input">
+                            </div>
+                            <!--</div>-->
+                        </div>
+                        <div class="layui-form-item">
+                            <!--<div class="layui-inline">-->
+                            <label class="layui-form-label">所属包：</label>
+                            <div class="layui-input-block">
+                                <!--<textarea placeholder="请输入内容" class="layui-textarea" name="progPackage"></textarea>-->
+                                <input type="text" name="progPackage" lay-verify="required" lay-reqtext="功能所属包是必填项" placeholder="请输入功能所属包" autocomplete="off" class="layui-input">
+                            </div>
+                            <!--</div>-->
+                        </div>
+                        <!--</div>-->
+                        <div class="layui-form-item">
+                            <!--<div class="layui-inline">-->
+                            <label class="layui-form-label">是否挂菜单：</label>
+                            <div class="layui-input-block">
+                                <input type="checkbox" checked="" name="IsMenu" lay-skin="switch" lay-filter="IsMenu" lay-text="是|否">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
+<script>
+    var rowcout = 0, ctrlindex = 0, colcout = 0,operatStatu = 1;
+    var starselect = false, selected = [];
+    var controls = [],fields=[],prog;
+    var canvas = document.getElementById("formdesigncanvas");
+    $(function () {
+          prog = new PageObj();
+    });
+    $load(function () {
+        getDataSource();
+
+        form.on('select(DataSourceNm)', function (data) {
+            getTables(data.value);
+            form.render('select');
+        });
+    });
+    function creatCol(id) {
+        let col = document.createElement("td");
+        col.setAttribute("class", "rowcol");
+        col.setAttribute("fixed", true);
+        col.setAttribute("fromdata", false);
+        //col.style.fontSize = "12px";
+        //$(col).attr("cols", 1);
+        col.id = id;
+        col.addEventListener("mousedown", function (e) {
+            ClearSelected();
+            this.style.border = "1px solid red";
+            selected.push(this);
+            starselect = true;
+        });
+        col.addEventListener("mouseup", function (e) {
+            starselect = false;
+        });
+        col.addEventListener("mouseover", function (e) {
+            if (starselect) {
+                let exis = false;
+                let thisobj = this;
+                selected.forEach(function (o) {
+                    if (o == thisobj) {
+                        exis = true;
+                        return false;
+                    }
+                });
+                if (!exis) {
+                    this.style.border = "1px solid red";
+                    selected.push(this);
+                }
+            }
+        });
+        //let lb = document.createElement("label");
+        //lb.textContent = "d";
+        //col.append(lb);
+        return col;
+    }
+
+    function merge() {
+        let r = 0, cols = 0, result = true;
+        let rs = [];
+        if (selected.length == 0) return;
+        selected.forEach(function (o) {
+            let exist = false;
+            let id = o.getAttribute("id");
+            let v = id.split("_");
+            r = parseInt(v[0]);
+            //cindex = parseInt(v[1]);
+            rs.forEach(function (row) {
+                if (row.id == r) {
+                    row.cols.push(o);
+                    exist = true;
+                    return false;
+                }
+            });
+            if (!exist) {
+                rs.push({ id: r, cols: [o] });
+            }
+        });
+        let lastcol;
+        if (rs.length == 1) {
+            let colspan = 0;
+            rs.forEach(function (rw) {
+                rw.cols.forEach(function (o) {
+                    let cs = o.getAttribute("colspan");
+                    if (cs != undefined)
+                        colspan += parseInt(cs);
+                    else
+                        colspan += 1;
+                    $(o).css("display", "none");
+                    lastcol = o;
+                });
+            });
+            if (lastcol != undefined) {
+                $(lastcol).css("display", "");
+                lastcol.setAttribute("colspan", colspan);
+            }
+        }
+        else {
+
+        }
+        //if (!result) {
+        //    return;
+        //}
+        //let rw = document.getElementById(r.toString());
+        ////let c = document.createElement("div");
+        //let cindex = 0;
+        //$.each(rw.children, function (i, o) {
+        //    if (o == selected[0] || o == selected[selected.length - 1]) {
+        //        cindex = i + 1;
+        //        return false;
+        //    }
+        //});
+        //let c = creatCol(r.toString() + "_" + cindex.toString(), cols);
+        ////c.setAttribute("class", "col-md-" + cols + " column formcanvascol");
+        ////c.setAttribute("id", r.toString() + "_" + cindex.toString());
+        ////c.setAttribute("cols", cols);
+        //rw.insertBefore(c, selected[0]);
+        //let chlds = [];
+        //for (var d = 0; d < selected.length; d++) {
+        //    $.each(selected[d].children, function (i, o) {
+        //        let id = o.getAttribute("id");
+        //        if (id != null && id != undefined)
+        //            chlds.push(o);
+        //    });
+        //    rw.removeChild(selected[d]);
+        //}
+        //if (chlds.length > 0) c.innerHTML = "";
+        //chlds.forEach(function (o) {
+        //    c.appendChild(o);
+        //});
+        ClearSelected();
+        selectcol(lastcol);
+        //canvas.
+        //canvas.insertBefore
+    }
+
+    function addlabel() {
+
+        selected.forEach(function (o) {
+            let lb = document.createElement("label");
+            lb.textContent = "字段名称";
+            lb.setAttribute("id", "label");
+            lb.style.width = "100%";
+            lb.style.textAlign = "center";
+            //lb.style.color = "#e6e6e8";
+            o.innerHTML = "";
+            o.append(lb);
+        });
+        ClearSelected();
+    }
+
+    function addinput() {
+        selected.forEach(function (o) {
+            let input = document.createElement("input");
+            //lb.textContent = "字段名称";
+            input.setAttribute("id", "input");
+            o.innerHTML = "";
+            o.append(input);
+        });
+        ClearSelected();
+    }
+    function addtextarea() {
+        selected.forEach(function (o) {
+            let input = document.createElement("textarea");
+            //lb.textContent = "字段名称";
+            input.setAttribute("id", "textarea");
+            input.setAttribute("class", "form-control");
+            input.setAttribute("rows", 3);
+            o.innerHTML = "";
+            o.append(input);
+        });
+        ClearSelected();
+    }
+
+    function backcolor() {
+        selected.forEach(function (o) {
+            o.style.backgroundColor = "#e6e6e8";
+        });
+        ClearSelected();
+    }
+    function insertRow() {
+        let row,currctrl;
+        if (selected.length == 0) {
+            appMessageBox("请先选中控件", 5);
+        }
+        else {
+            let tb = $(selected[0]).parent().parent();
+            controls.forEach(function (o) {
+                if (o.ID == tb[0].id) {
+                    currctrl = o;
+                    return false;
+                }
+            });
+            if (currctrl.ControlType == 5) {
+                return false;
+            }
+            row = $(selected[0]).parent();
+            let coltotal = 0;
+            $.each(row.children(), function (i, o) {
+                let v = o.getAttribute("colspan");
+                if (v != undefined) {
+                    coltotal += parseInt(v);
+                }
+                else
+                    coltotal += 1;
+            });
+            //$.each(tb.children(), function (i, o) {
+            //    rowindex += 1;
+            //});
+            rowcout += 1;
+            let rw = CreateRow(rowcout, coltotal);
+            tb.append(rw);
+        }
+    }
+
+    function insertColumn() {
+        let row,currctrl;
+        if (selected.length == 0) {
+            appMessageBox("请先选中控件", 5);
+        }
+        else {
+            let tb = $(selected[0]).parent().parent();
+            //controls.forEach(function (o) {
+            //    if (o.ID == tb[0].id) {
+            //        currctrl = o;
+            //        return false;
+            //    }
+            //});
+            //if (currctrl.ControlType == 5) {
+            //    return false;
+            //}
+            $.each(tb.children(), function (i, o) {
+                let rowindex = o.firstChild.id.split('_')[0];
+                colcout += 1;
+                o.append(creatCol(rowindex + "_" + colcout));
+            });
+        }
+    }
+
+    function selectcol(c) {
+        c.style.border = "1px solid red";
+        selected.push(c);
+    }
+    function ClearSelected() {
+        selected.forEach(function (o) {
+            o.style.border = "";
+        });
+        selected.length = 0;
+    }
+
+    //最新代码
+    function AddTable() {
+        ctrlindex += 1;
+        let id = "rpttable" + ctrlindex;
+        CreateRptTable(id, 8, 3);
+        rowcout += 3;
+        colcout += 8;
+        let ctrl = new ControlObj(id, '表格' + ctrlindex);
+        ctrl.ControlType = 4;
+        ctrl.OrderNo = ctrlindex;
+        controls.push(ctrl);
+    }
+
+    function AddGrid() {
+        ctrlindex += 1;
+        let id = "rptgrid" + ctrlindex;
+        CreateRptGrid(id, 8);
+        rowcout += 1;
+        colcout += 8;
+        let ctrl = new ControlObj(id, 'Grid' + ctrlindex);
+        ctrl.ControlType = 5;
+        ctrl.OrderNo = ctrlindex;
+        controls.push(ctrl);
+    }
+
+    /**
+ * 创建报表设计的 表格控件
+ * @param {any} id
+ * @param {any} colcount
+ * @param {any} rowcount
+ */
+    function CreateRptTable(id, colcount, rowcount) {
+        let rpttb = document.createElement("table");
+        rpttb.setAttribute("border", 1);
+        rpttb.id = id;
+        let col;
+        for (let i = 1; i <= rowcount; i++) {
+            let row = document.createElement("tr");
+            for (let n = 1; n <= colcount; n++) {
+                col = creatCol(i + "_" + n);
+                row.append(col);
+            }
+            rpttb.append(row);
+        }
+        canvas.append(rpttb);
+        return rpttb;
+    }
+
+    function CreateRptGrid(id,colcount) {
+        let rpttb = document.createElement("table");
+        rpttb.setAttribute("border", 1);
+        rpttb.id = id;
+        let col;
+        let row = document.createElement("tr");
+        for (let n = 1; n <= colcount; n++) {
+            col = creatCol(1 + "_" + n);
+            col.textContent = "列名" + n;
+            row.append(col);
+        }
+        rpttb.append(row);
+        canvas.append(rpttb);
+        return rpttb;
+    }
+
+    function CreateRow(rowindex, coltotal) {
+        let row = document.createElement("tr");
+        let col;
+        for (let n = 1; n <= coltotal; n++) {
+            col = creatCol(rowindex + "_" + n);
+            row.append(col);
+        }
+        return row;
+    }
+
+    function columninfo() {
+        let colobj = {};
+        let currctrl;
+        if (selected.length == 0) {
+            appMessageBox("请先选中控件", 5);
+        }
+        else {
+            let tb = $(selected[0]).parent().parent()[0];
+            controls.forEach(function (o) {
+                if (o.ID == tb.id) {
+                    currctrl = o;
+                    return false;
+                }
+            });
+            //if (currctrl.ControlType == 5) {
+            //    return false;
+            //}
+            if (currctrl.TableNm != undefined && currctrl.TableNm != '') {
+                getrptFields(currctrl.DataSourceNm, currctrl.TableNm, function () {
+                    form.val('StyleSetting', { fromfield: colobj.fromfield });
+                });
+            }
+            colobj.ID = selected[0].id;
+            let fixed = $(selected[0]).attr("fixed") == "true" ? true : false;
+            let fromdata = $(selected[0]).attr("fromdata") == "true" ? true : false;
+            colobj.fixedtext = fixed;
+            colobj.fromdata = fromdata;
+            colobj.labeltext = $(selected[0]).text();
+            colobj.horizontalalign = $(selected[0]).css("text-align");
+            colobj.verticalalign = $(selected[0]).css("vertical-align");
+            colobj.fontsize=$(selected[0]).css("font-size");
+            if (colobj.fromdata) {
+                colobj.fromfield = getBracketStr($(selected[0]).text()).split('.')[1];
+            }
+            form.val('StyleSetting', colobj);
+            appComfirmBox('单元格属性设置', 'rptColinfo', true, function () {
+                let dt = form.val("StyleSetting");
+                $(selected[0]).attr("fixed", dt.fixedtext == "on");
+
+                $(selected[0]).attr("fromdata", dt.fromdata == "on");
+                if (dt.fromdata == "on") {
+                    let exisfield = false;
+                    $(selected[0]).text("{" + currctrl.TableNm + "." + dt.fromfield + "}");
+                    fields.forEach(function (f) {
+                        if (f.ID == currctrl.ID && f.Field == dt.fromfield) {
+                            f.Field = dt.fromfield;
+                            exisfield = true;
+                        }
+                    });
+                    if (!exisfield) {
+                        let fld = new FieldObj();
+                        fld.Field = dt.fromfield;
+                        fld.ID = currctrl.ID;
+                        fld.RptColId = colobj.ID;
+                        //let fld = { ID: currctrl.ID, Field: dt.fromfield, RptColId: colobj.ID };
+
+                        fields.push(fld);
+                    }
+                }
+                else {
+                    $(selected[0]).text(dt.labeltext);
+                }
+                $(selected[0]).css("text-align", dt.horizontalalign);
+                $(selected[0]).css("vertical-align", dt.verticalalign);
+                $(selected[0]).css("font-size", dt.fontsize);
+            });
+        }
+    }
+    function tableinfo() {
+        let tableobj = {};
+        if (selected.length == 0) {
+            appMessageBox("请先选中控件", 5);
+        }
+        else {
+            if (selected[0].tagName == "table".toUpperCase()) {
+                tableobj.ID = selected[0].id;
+            }
+            else {
+                let tb = $(selected[0]).parent().parent()[0];
+                tableobj.ID = tb.id;
+            }
+            controls.forEach(function (o) {
+                if (o.ID == tableobj.ID) {
+                    tableobj = o;
+                    return false;
+                }
+            });
+            form.val('TableInfoSetting', JSON.parse(JSON.stringify(tableobj)));
+            appComfirmBox('表格属性设置', 'rptTableinfo', true, function () {
+                let dt = form.val("TableInfoSetting");
+                controls.forEach(function (o) {
+                    if (o.ID == tableobj.ID) {
+                        o.DataSourceNm = dt.DataSourceNm;
+                        o.TableNm = dt.TableNm;
+                    }
+                });
+            });
+        }
+
+    }
+
+    function rptinfo() {
+        if (prog == null || prog == undefined) {
+            prog = new PageObj();
+        }
+        //let tbs = getBindTable();
+        //RenderTplHtml('tbTpl', 'MastTable', tbs, false);
+        form.val('progform', JSON.parse(JSON.stringify(prog)));
+        appComfirmBox('报表属性', 'rptinfo', true, function () {
+            let proginfo = form.val('progform');
+            $.each(prog, function (n, v) {
+                let exisnm = false;
+                $.each(proginfo, function (n2, v2) {
+                    if (n == n2) {
+                        exisnm = true;
+                        if (typeof (prog[n]) == "boolean") {
+                            prog[n] = v2 == "on" ? true : false;
+                        }
+                        else
+                            prog[n] = v2;
+                        return false;
+                    }
+                });
+                if (!exisnm)
+                    prog[n] = false;
+            });
+        });
+    }
+
+    function getDataSource() {
+        $.ajax({
+            type: 'get',
+            url: '/AppSys/GetRptDataSource',
+            data: {},
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            success: function (data) {
+                //var gettpl = document.getElementById('dsTpl').innerHTML;
+
+                //laytpl(gettpl).render(data, function (html) {
+                //    //得到的模板渲染到html
+                //    document.getElementById('DataSource').innerHTML = html;
+                //});
+                RenderTplHtml('dsTpl', 'DataSource', data.Data, false);
+                form.render('select');
+            },
+            error: function (msg) {
+                alert("zyytes" + msg.responseText);
+            }
+        });
+    }
+
+    function getTables(ds, renderOverEvent) {
+        $.ajax({
+            type: 'get',
+            url: '/AppSys/GetRptTableinfobyds',
+            data: { dsnm: ds },
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            success: function (data) {
+                //var gettpl = document.getElementById('tbTpl').innerHTML;
+
+                //laytpl(gettpl).render(data, function (html) {
+                //    //得到的模板渲染到html
+                //    document.getElementById('TableInfo').innerHTML = html;
+                //});
+                RenderTplHtml('tbTpl', 'TableInfo', data.Data, false);
+                form.render('select');
+                if (renderOverEvent != null && renderOverEvent != undefined)
+                    renderOverEvent();
+            },
+            error: function (msg) {
+                alert(msg.responseText);
+            }
+        });
+    }
+
+    function getrptFields(ds,tbnm,renderOverEvent) {
+            //let ds = $('#DataSource').val();
+            $.ajax({
+                type: 'get',
+                url: '/AppSys/GetRptFieldInfo',
+                data: { dsnm: ds, tbnm: tbnm },
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                success: function (data) {
+                    RenderTplHtml('fieldTpl', 'fromfield', data.Data, false);
+                    form.render('select');
+                    if (renderOverEvent != null && renderOverEvent != undefined)
+                        renderOverEvent();
+
+                },
+                error: function (msg) {
+                    alert(msg.responseText);
+                }
+            });
+        }
+
+    function preview() {
+        ClearSelected();
+        PrintPreview();
+        ////if (fang < 10) {
+        //ClearSelected();
+        //bdhtml = window.document.body.innerHTML;//获取当前页的html代码
+        //sprnstr = "<!--startprint-->";//设置打印开始区域
+        //eprnstr = "<!--endprint-->";//设置打印结束区域
+        //prnhtml = bdhtml.substring(bdhtml.indexOf(sprnstr) + 18); //从开始代码向后取html
+        //prnhtml = prnhtml.substring(0, prnhtml.indexOf(eprnstr));//从结束代码向前取html
+        //window.document.body.innerHTML = prnhtml;
+        //window.print();
+        //window.document.body.innerHTML = bdhtml;
+        ////} else {
+        ////    window.print();
+        ////}
+    }
+
+    function rptsave() {
+        ClearSelected();
+        if (prog == null || prog == undefined || prog.progNm == null
+            || prog.progNm == undefined || prog.progNm == '') {
+            //appComfirmBox('功能基本信息')
+            appComfirmBox('报表属性', 'rptinfo', true, function () {
+                let proginfo = form.val('progform');
+                //prog = proginfo;
+                $.each(prog, function (n, v) {
+                    let exisnm = false;
+                    $.each(proginfo, function (n2, v2) {
+                        if (n == n2) {
+                            exisnm = true;
+                            if (typeof (prog[n]) == "boolean") {
+                                prog[n] = v2 == "on" ? true : false;
+                            }
+                            else
+                                prog[n] = v2;
+                            return false;
+                        }
+                    });
+                    if (!exisnm && typeof (prog[n]) == "boolean")
+                        prog[n] = false;
+                });
+                //pageobj = proginfo;
+                dorptsave();
+            });
+        }
+        else {
+            dorptsave();
+        }
+    }
+
+    function dorptsave() {
+        let clientdata = [], clientDataInfo;
+        let progobj = new LibClientDatas();
+        progobj.TableNm = "ProgInfo";
+
+        clientDataInfo = new LibClientDataInfo();
+        clientDataInfo.clientDataStatus = operatStatu;
+        clientDataInfo.Datas = prog;
+        progobj.ClientDataInfos.push(clientDataInfo);
+        clientdata.push(progobj);
+
+        let progcontrols = new LibClientDatas();
+        progcontrols.TableNm = "ProgControlInfo";
+        clientdata.push(progcontrols);
+        $.each(controls, function (i, o) {
+            o.progNm = prog.progNm;
+            o.OrderNo = i;
+            clientDataInfo = new LibClientDataInfo();
+            //if (o.status != undefined && o.status == 2)
+            clientDataInfo.clientDataStatus = o.status == undefined ? 1 : o.status;
+            clientDataInfo.Datas = o;
+            progcontrols.ClientDataInfos.push(clientDataInfo);
+        });
+        let fieldcontrol = new LibClientDatas();
+        fieldcontrol.TableNm = "ProgFieldInfo";
+        clientdata.push(fieldcontrol);
+        $.each(fields, function (i, o) {
+            o.progNm = prog.progNm;
+            o.OrderNo = i;
+            clientDataInfo = new LibClientDataInfo();
+            clientDataInfo.clientDataStatus = o.status == undefined ? 1 : o.status;
+            clientDataInfo.Datas = o;
+            fieldcontrol.ClientDataInfos.push(clientDataInfo);
+        });
+        let rptHtmlInfo = new LibClientDatas();
+        rptHtmlInfo.TableNm = "RptHtmlInfo";
+        clientdata.push(rptHtmlInfo);
+        clientDataInfo = new LibClientDataInfo();
+        clientDataInfo.clientDataStatus = operatStatu;
+        clientDataInfo.Datas = { progNm: prog.progNm, HtmlStr: canvas.innerHTML };
+        rptHtmlInfo.ClientDataInfos.push(clientDataInfo);
+
+        $.ajax({
+            type: 'post',
+            url: '/AppSys/Prog/Update/ProgInfo',
+            data: JSON.stringify(clientdata),
+            contentType: 'application/json; charset=utf-8',
+            dataType: 'json',
+            success: function (respon) {
+                layer.msg(respon.Message, { icon: (respon.IsSuccess ? 1 : 2), time: 5000 });
+            },
+            error: function (msg) {
+                layer.msg(respon.Message, { icon: (respon.IsSuccess ? 1 : 2), time: 5000, shade: [0.3, '#000', true] });
+            }
+        });
+    }
+
+    //横向布局
+    function transverse() {
+        $('.layui-main').css("width", "842px");
+        $('.layui-main').css("height", "592px");
+    }
+    function longitudinal() {
+        $('.layui-main').css("height", "842px");
+        $('.layui-main').css("width", "592px");
+    }
+
+
+</script>
+
+<script id="dsTpl" type="text/html">
+    <!--<select name="DataSource" lay-verify="required" lay-filter="DataSource">-->
+    <option value=""></option>
+    {{# for(var i = 0; i < d.length; i++){ }}
+    <option value="{{ d[i].dsNm }}">{{ d[i].dsDesc }}</option>
+
+    {{# } }}
+    <!--</select>-->
+</script>
+<script id="tbTpl" type="text/html">
+    <option value=""></option>
+    {{# for(var i = 0; i < d.length; i++){ }}
+    <option value="{{ d[i].tableNm }}">{{ d[i].tableDesc }}</option>
+    {{# } }}
+</script>
+<script id="fieldTpl" type="text/html">
+    <option value=""></option>
+    {{# for(var i = 0; i < d.length; i++){ }}
+    <option value="{{ d[i].fieldNm }}">{{ d[i].fieldDesc }}</option>
+    {{# } }}
+</script>

@@ -1,0 +1,143 @@
+﻿
+<div class="layui-tab layui-tab-brief" lay-filter="docDemoTabBrief">
+    <ul class="layui-tab-title">
+        <li class="layui-this">菜单设置</li>
+        <li>用户设置</li>
+    </ul>
+    <div class="layui-tab-content">
+        <div class="layui-tab-item layui-show">
+            <div id="appfuncbtngroups" class="layui-btn-container">
+                <div class="layui-btn-group">
+                    <button id="appbtnsave" class="layui-btn-primary layui-btn layui-icon layui-icon-ok-circle" onclick="SaveMenus()">保存</button>
+                    <button id="appbtnsave" class="layui-btn-primary layui-btn layui-icon layui-icon-add-1" onclick="CreateTreeNode()">新增节点</button>
+                    <button id="appbtnsave" class="layui-btn-primary layui-btn layui-icon layui-icon-delete" onclick="DeleteTreeNode()">删除节点</button>
+                </div>
+            </div>
+            <div class="layui-row">
+                <div class="layui-col-xs2">
+                    <div id="usermenutree" class="demo-tree demo-tree-box">
+
+                    </div>
+                </div>
+                <div id="usermenuctrl" class="layui-col-xs10">
+                    <!--<table class="layui-hide" id="usermenugrid_gridvm" lay-filter="usermenugrid">
+                    </table>-->
+                </div>
+            </div>
+        </div>
+        <div class="layui-tab-item">
+            可以修改用户信息，用户登录密码等功能
+        </div>
+    </div>
+</div>
+
+<!--<div id="menugrid_toolbar" class="layui-btn-container" style="display:none">
+    <div class="layui-btn-group">
+        <button class="layui-btn layui-btn-sm layui-icon layui-icon-add-1" title="新增" data-gridid="usermenugrid" data-ds="ComDBContext" data-tbnm="UserMenu" onclick="return grid_add(this)"></button>
+        <button class="layui-btn layui-btn-sm layui-icon layui-icon-edit" title="编辑" data-gridid="usermenugrid" data-ds="ComDBContext" data-tbnm="UserMenu" onclick="return grid_edit(this)"></button>
+        <button class="layui-btn layui-btn-sm layui-icon layui-icon-delete" title="删除" data-gridid="usermenugrid" data-ds="ComDBContext" data-tbnm="UserMenu" onclick="return grid_delete(this)"></button>
+    </div>
+</div>-->
+<!--</body>
+</html>-->
+<script>
+    //var grids = [];
+    var currtreeid;
+    var menutree;
+    //注意：选项卡 依赖 element 模块，否则无法进行功能性操作
+    $load(function () {
+        //var usermenuiframe = dynamicLoadProgPage("USERMENU", null, 800);
+        //usermenuiframe.onload = function (e) {
+        //    usermenuiframe.contentWindow.document.getElementById("appfuncbtngroups").remove();
+        //    //$('#usermenuctrl').html(usermenuiframe.contentWindow.document.body.innerHTML);
+        //}
+        //$('#usermenuctrl').append(usermenuiframe);
+        LoadGridPart("appsetting","grid1", "usermenuctrl", function (response) {
+        });
+        $.ajax({
+            type: "Get",
+            url:getUrl(proginfo.progPackage, proginfo.controllerNm, "GetUserMenu"),
+            data: {},
+            dataType: "Json",
+            success: function (respon) {
+                //var gd= progmenusgrid(respon.Data.progs);
+                 menutree = new AppTree('usermenutree');
+                menutree.edit = ['update'];
+                menutree.showCheckbox = false;
+                menutree.data = respon.Data.direct;
+                menutree.initialTree();
+                menutree.NodeClick = function (nodedata) {
+                    currtreeid = nodedata.id;
+                    let newgddata = [];
+                    let treeobj = $('#usermenutree');
+                    let allchkobj = treeobj.find(".layui-tree-main");
+                    $.each(allchkobj, function (i, o) {
+                        let v = parseInt($(o).parent().parent().attr("data-id"));
+                        if (v == currtreeid) {
+                            $(o).find('.layui-tree-txt').addClass("erpcodeappcolor");
+                        }
+                        else {
+                            $(o).find('.layui-tree-txt').removeClass("erpcodeappcolor");
+                        }
+                    });
+                    grids.forEach(function (gd) {
+                        if (gd.$table.ElemtableID == 'grid1_gridvm') {
+                            //gd.$table.data = newgddata;
+                            //gd.$table.url = '';
+                            gd.$table.where.pid = currtreeid;
+                            gd.ReSetOptions();
+                        }
+                    });
+                }
+            },
+            error: function () {
+            }
+        });
+
+    });
+
+    function CreateTreeNode() {
+        let maxid = 1;
+        if (currtreeid == undefined) {
+            appMessageBox('请先选择节点',5);
+        }
+        $.ajax({
+            type: "Get",
+            url: getUrl(proginfo.progPackage, proginfo.controllerNm, "CreateTreeNode"),
+            data: { pid: currtreeid },
+            dataType: "Json",
+            success: function (respon) {
+                if (respon.IsSuccess) {
+                    menutree.showCheckbox = false;
+                    menutree.data = respon.Data;
+                    menutree.initialTree();
+
+                    //menutree.Reload();
+                }
+            },
+            error: function () {
+            }
+        });
+        return maxid;
+    }
+
+    function SaveMenus() {
+         $.ajax({
+            type: "post",
+            url: getUrl(proginfo.progPackage, proginfo.controllerNm, "SaveMenus"),
+            data: {},
+            dataType: "Json",
+            success: function (respon) {
+                if (respon.IsSuccess) {
+                    menutree.showCheckbox = false;
+                    menutree.data = respon.Data;
+                    menutree.initialTree();
+
+                    //menutree.Reload();
+                }
+            },
+            error: function () {
+            }
+        })
+    }
+</script>

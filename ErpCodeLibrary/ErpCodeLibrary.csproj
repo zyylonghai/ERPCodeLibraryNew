@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+  </PropertyGroup>
+
+
+  <ItemGroup>
+    <Folder Include="Appcode\" />
+    <Folder Include="wwwroot\pages\com\" />
+    <Folder Include="wwwroot\pages\scm\" />
+    <Folder Include="wwwroot\pages\WMSRawMaterial\" />
+    <Folder Include="wwwroot\pages\WMS\" />
+    <Folder Include="Db\" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="3.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="3.1.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Caching.Redis" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="3.0.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\comDal\ErpCode.comDal.csproj" />
+    <ProjectReference Include="..\Controllers\WMS.MasterDataController\WMS.MasterDataController.csproj" />
+    <ProjectReference Include="..\Controllers\WMS.RawMaterialCotroller\WMS.RawMaterialCotroller.csproj" />
+    <ProjectReference Include="..\ErpCode.AuthorDal\ErpCode.AuthorDal.csproj" />
+    <ProjectReference Include="..\ErpCode.BaseApiController\ErpCode.BaseApiController.csproj" />
+    <ProjectReference Include="..\ErpCode.Com\ErpCode.Com.csproj" />
+    <ProjectReference Include="..\ErpCode.UserDal\ErpCode.UserDal.csproj" />
+    <ProjectReference Include="..\ErpCodeAppDal\ErpCode.AppDal.csproj" />
+    <ProjectReference Include="..\LibDBContext\LibDBContext.csproj" />
+  </ItemGroup>
+
+
+  <ProjectExtensions><VisualStudio><UserProperties properties_4launchsettings_1json__JsonSchema="" /></VisualStudio></ProjectExtensions>
+
+</Project>

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Dal\WMS.MasterDataDal\WMS.MasterDataDal.csproj" />
+    <ProjectReference Include="..\..\ErpCode.BaseApiController\ErpCode.BaseApiController.csproj" />
+  </ItemGroup>
+
+</Project>

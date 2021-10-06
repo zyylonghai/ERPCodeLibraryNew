@@ -1,0 +1,1629 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>新建功能页</title>
+    <link href="../../css/okadmin.css" rel="stylesheet" />
+    <script src="../../lib/jquery/dist/jquery.js"></script>
+    <script src="../../lib/layui/layui.js"></script>
+    <script src="../../js/Controls.js"></script>
+    <script src="../../js/pageDesign.js"></script>
+    <script src="../../js/gridview.js"></script>
+    <script src="../../js/appcom.js"></script>
+    <!--<script src="../../js/ajaxBus.js"></script>-->
+    <script>
+        var currfield, currtabId, operatStatu = 1;
+        var x1, y1, yoffset, isdown = false, dragfield;
+        $load(function () {
+            //var windwidth = $(window).width(), windheight = $(window).height();
+            //var layerwidth = windwidth - 350;
+            //触发事件
+            var active = {
+                datainfo: function () {
+                    var that = this;
+                    var currctr;
+                    let contenid = 'ndinfo';
+                    let btnfunc = btnyes;
+                    //var currfield;
+                    //getDataSource();
+                    if (selected.length == 0) {
+                        return;
+                    }
+                    controls.forEach(function (o) {
+                        if (o.ID == selected[0].id)
+                            currctr = o;
+                    });
+                    if (currctr.ControlType == 3) {//按钮组控件
+                        contenid = 'btngroupInfoBox';
+                        btnfunc = btnyes2;
+                    }
+                    appComfirmBox(currctr.title + '-属性设置', contenid, true, btnfunc);
+                    let exists = [];
+                    let gridbtns = [];
+                    fields.forEach(function (o) {
+                        if (o.ID == currctr.ID) {
+                            if (o.ElemType == -1) {
+                                gridbtns.push({ fieldNm: o.Field, fieldDesc: o.Fieldtitle });
+                            }
+                            else
+                                exists.push({ fieldNm: o.Field, fieldDesc: o.Fieldtitle });
+                        }
+                    });
+                    if (currctr.DataSourceNm != undefined && currctr.DataSourceNm != '' && currctr.DataSourceNm != null) {
+                        getTables(currctr.DataSourceNm, function () {
+                            form.val('DataSourceSetting', {
+                                "TableNm": currctr.TableNm
+                            });
+                        });
+                    }
+                    if (currctr.ControlType == 1) {
+                        $('#app_gridtooltab').hide();
+                    }
+                    else if (currctr.ControlType == 2) {//表格控件
+                        $('#app_gridtooltab').show();
+                    }
+                    if (currctr.ControlType == 3) {//按钮组控件
+                        form.val('btngroupform', JSON.parse(JSON.stringify(currctr)));
+                        RenderTplHtml('fldlistTpl', 'btnlist', exists, false);
+                    }
+                    else {
+                        //赋默认值
+                        form.val('DataSourceSetting', {
+                            "DataSourceNm": currctr.DataSourceNm //
+                            , "TableNm": currctr.TableNm
+                            , "btalismn": currctr.btalismn
+                        });
+                        form.val('StyleSetting', JSON.parse(JSON.stringify(currctr)));
+                        RenderTplHtml('fldlistTpl', 'fieldlist', exists, false);
+                    }
+                },
+                proginfo: function () {
+                    if (pageobj == null || pageobj == undefined) {
+                        pageobj = new PageObj();
+                    }
+                    let tbs = getBindTable();
+                    RenderTplHtml('tbTpl', 'MastTable', tbs, false);
+                    form.val('progform', JSON.parse(JSON.stringify(pageobj)));
+                    appComfirmBox('功能基本信息', 'comfirmboxtest', true, function () {
+                        let proginfo = form.val('progform');
+                        //pageobj = form.val('progform');
+                        $.each(pageobj, function (n, v) {
+                            let exisnm = false;
+                            $.each(proginfo, function (n2, v2) {
+                                if (n == n2) {
+                                    exisnm = true;
+                                    if (typeof (pageobj[n]) == "boolean") {
+                                        pageobj[n] = v2 == "on" ? true : false;
+                                    }
+                                    else
+                                        pageobj[n] = v2;
+                                    return false;
+                                }
+                            });
+                            if (!exisnm && typeof (pageobj[n]) == "boolean")
+                                pageobj[n] = false;
+                        });
+                        //pageobj = proginfo;
+                    });
+                },
+                SearchProg: function () {
+                    let gd = new appgrid("appSearchProg");
+                    gd.$table.url = "/AppSys/Prog/GetProgData/ProgInfo";
+                    gd.$table.toolbarid = "";
+                    gd.$table.title = "功能列表";
+                    gd.$table.isSimple = true;
+                    gd.$table.totalRow = false;
+                    var col = new gd.column('progNm', '功能名称');
+                    col.fixed = "left";
+                    gd.$table.columns.push(col);
+                    col = new gd.column('progDesc', '功能描述');
+                    col.totalRowText = "合计";
+                    gd.$table.columns.push(col);
+                    col = new gd.column('CreateDT', '创建日期');
+                    col.totalRow = true;
+                    gd.$table.columns.push(col);
+                    col = new gd.column('Creater', '创建者');
+                    gd.$table.columns.push(col);
+                    gd.initialTable();
+                    appComfirmBox('查询功能', 'searchProg', true, function () {
+                        let prognm = gd.getSelectData().data[0].progNm;
+                        $.ajax({
+                            type: 'get',
+                            url: "/AppSys/Prog/GetProgInfoDataNoAuthority/ProgInfo",
+                            data: { prognm: prognm },
+                            success: function (response) {
+                                pageobj = null;
+                                pagecontent.innerHTML = "";
+                                controls.length = 0;
+                                fields.length = 0;
+                                selected.length = 0;
+                                operatStatu = 2;
+                                pageobj = response.Data.proginfo.ClientDataInfos[0].Datas;
+                                let ctrls = response.Data.controlinfos.ClientDataInfos[0].Datas;
+                                let filds = response.Data.fieldinfos.ClientDataInfos[0].Datas;
+                                filds.forEach(function (f) {
+                                    f.Fieldtitle = f.Title;
+                                    f.status = operatStatu;
+                                    fields.push(f);
+                                });
+                                ctrls.forEach(function (c) {
+                                    c.title = c.Title;
+                                    c.status = operatStatu;
+                                    controls.push(c);
+                                    doinitialCtrl(c);
+                                    doInitialElement(c);
+                                });
+                            },
+                            error: function (msg) {
+
+                            }
+                        });
+                    });
+                }
+            };
+            $('.layui-btn-primary').on('click', function () {
+                var othis = $(this), method = othis.data('method');
+                active[method] ? active[method].call(this, othis) : '';
+            });
+            form.verify({
+                title: function (value) {
+                    if (value.length < 5) {
+                        return '标题至少得5个字符啊';
+                    }
+                }
+                , pass: [
+                    /^[\S]{6,12}$/
+                    , '密码必须6到12位，且不能出现空格'
+                ]
+                , content: function (value) {
+                    layedit.sync(editIndex);
+                }
+            });
+
+            form.on('select(DataSourceNm)', function (data) {
+                getTables(data.value);
+                form.render('select');
+                //console.log(data);
+                //console.log(data.elem); //得到select原始DOM对象
+                //console.log(data.value); //得到被选中的值
+                //console.log(data.othis); //得到美化后的DOM对象
+            });
+            form.on('select(TableNm)', function (data) {
+                let currctr;
+                controls.forEach(function (o) {
+                    if (o.ID == selected[0].id)
+                        currctr = o;
+                });
+                if (currctr.TableNm != data.value) {
+                    getFields(data.value);
+                    form.render();
+                }
+                //form.render('select');
+            });
+            form.on('select(Field)', function (data) {
+                let ctr;
+                controls.forEach(function (o) {
+                    if (o.ID == selected[0].id)
+                        ctr = o;
+                });
+                savecurrfield();
+                fields.forEach(function (o) {
+                    if (o.ID == ctr.ID && o.Field == data.value)
+                        currfield = o;
+                });
+                if (currfield == null || currfield == undefined) {
+                    currfield = new FieldObj();
+                    currfield.ID = ctr.ID;
+                    currfield.Field = data.value;
+                    currfield.Fieldtitle = data.value;
+                    fields.push(currfield);
+                }
+                form.val("DataSourceSetting", JSON.parse(JSON.stringify(currfield)));
+                //form.val('DataSourceSetting', {
+                //    //"Field": field.FieldID
+                //    "IsHide": currfield.IsHide //复选框选中状态
+                //    , "OnlyRead": currfield.OnlyRead //开关状态
+                //    , "IsOnline": currfield.IsOnline
+                //    , "ElemType": currfield.ElemType
+                //    , "DefaultValue": currfield.DefaultValue
+                //    , "Remark": currfield.Remark
+                //});
+
+            });
+
+            element.on('tab(appcontrolAttr)', function () {
+                if (currtabId != undefined && currtabId != '') {
+                    if (currtabId == 'datasourcetab') {
+                        savecurrfield('FieldattrSetting');
+                    }
+                    else if (currtabId == 'gridtooltab') {
+                        savecurrfield('gridbtninfoform');
+                    }
+                }
+                currtabId = this.getAttribute('lay-id');
+                //alert(this.getAttribute('lay-id'));
+                //location.hash = 'test1=' + this.getAttribute('lay-id');
+            });
+
+            getDataSource();
+            getFieldtypes();
+        });
+        function createfunc(isspecial) {
+            $.ajax({
+                type: 'get',
+                url: '/com/CheckBill/Testapi ',
+                data: {},
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'text',
+                success: function (data) {
+
+                },
+                error: function (msg) {
+                    alert(msg.responseText);
+                }
+            });
+
+        }
+
+        function getDataSource() {
+            $.ajax({
+                type: 'get',
+                url: '/AppSys/GetAllDataSource',
+                data: {},
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                success: function (data) {
+                    var gettpl = document.getElementById('dsTpl').innerHTML;
+
+                    laytpl(gettpl).render(data, function (html) {
+                        //得到的模板渲染到html
+                        document.getElementById('DataSource').innerHTML = html;
+                    });
+                    form.render('select');
+                },
+                error: function (msg) {
+                    alert("zyytes" + msg.responseText);
+                }
+            });
+        }
+
+        function getTables(ds,renderOverEvent) {
+            $.ajax({
+                type: 'get',
+                url: '/AppSys/GetTableinfobyds',
+                data: { dsnm: ds },
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                success: function (data) {
+                    var gettpl = document.getElementById('tbTpl').innerHTML;
+
+                    laytpl(gettpl).render(data, function (html) {
+                        //得到的模板渲染到html
+                        document.getElementById('TableInfo').innerHTML = html;
+                    });
+                    form.render('select');
+                    if (renderOverEvent != null && renderOverEvent != undefined)
+                        renderOverEvent();
+                },
+                error: function (msg) {
+                    alert(msg.responseText);
+                }
+            });
+        }
+        function getFields(tbnm) {
+            let ds = $('#DataSource').val();
+            $.ajax({
+                type: 'get',
+                url: '/AppSys/GetFieldInfo',
+                data: { dsnm: ds, tbnm: tbnm },
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                success: function (data) {
+                    RenderTplHtml('fldlistTpl', 'fieldlist', data, false);
+                    //fields.length = 0;
+                    let removes = [];
+                    fields.forEach(function (o) {
+                        if (o.ID == selected[0].id) {
+                            removes.push(o);
+                        }
+                    });
+                    removes.forEach(function (o) {
+                        $.each(fields, function (i, f) {
+                            if (f.ID == selected[0].id && f.Field == o.Field) {
+                                fields.splice(i, 1);
+                                return false;
+                            }
+                        });
+                    });
+                    let fld;
+                    let cout = 0;
+                    data.forEach(function (o) {
+                        fld = new FieldObj();
+                        fld.ID = selected[0].id;
+                        fld.Field = o.fieldNm;
+                        fld.Fieldtitle = o.fieldDesc;
+                        fld.OrderNo = cout;
+                        if (o.isappfield) {
+                            fld.IsHide = true;
+                        }
+                        if (o.fieldType == 2) {//日期类型
+                            fld.ElemType = 5;
+                        }
+                        else if (o.fieldType == 5) {//枚举类型
+                            fld.ElemType = 3;
+                        }
+                        else if (o.fieldType == 3 || o.fieldType == 4) {//只输入数字
+                            fld.IsNumber = true;
+                        }
+                        else if (o.fieldType == 6) {//搜索控件
+                            fld.ElemType = 10;
+                        }
+                        fields.push(fld);
+                        cout++;
+                    });
+                    //var gettpl = document.getElementById('fldTpl').innerHTML;
+
+                    //laytpl(gettpl).render(data, function (html) {
+                    //    document.getElementById('fieldInfo').innerHTML = html;
+                    //});
+                    //form.render('select');
+                },
+                error: function (msg) {
+                    alert(msg.responseText);
+                }
+            });
+        }
+        //获取元素控件类型
+        function getFieldtypes() {
+            $.ajax({
+                type: 'get',
+                url: '/AppSys/GetElemType',
+                data: {},
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                success: function (data) {
+                    var gettpl = document.getElementById('fieldtypeTpl').innerHTML;
+
+                    laytpl(gettpl).render(data, function (html) {
+                        document.getElementById('fieldelemtype').innerHTML = html;
+                    });
+                    form.render('select');
+                },
+                error: function (msg) {
+                    alert(msg.responseText);
+                }
+            });
+        }
+        function getFieldOptions(ctrlid, tbnm, fieldnm) {
+            let ds = $('#DataSource').val();
+            $.ajax({
+                type: 'get',
+                url: '/AppSys/GetFieldOptions',
+                data: { dsnm: ds, tbnm: tbnm, fieldnm: fieldnm },
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                success: function (data) {
+                    RenderTplHtml('fieldtypeTpl', ctrlid + '_' + fieldnm + '_option', data, false);
+                    form.render('select');
+                },
+                error: function (msg) {
+                    alert(msg.responseText);
+                }
+            });
+        }
+
+        function savecurrfield(elemid) {
+            if (currfield != null && currfield != undefined) {
+                fields.forEach(function (f) {
+                    if (f.ID == selected[0].id && f.Field == currfield.Field) {
+                        let currdt = form.val(elemid);
+                        $.each(f, function (n, v) {
+                            if (n != "Field" && n != "ControlID") {
+                                if (currdt[n] == "on") {
+                                    f[n] = true;
+                                }
+                                else {
+                                    if (typeof (f[n]) == "boolean" && currdt[n] == undefined)
+                                        f[n] = false;
+                                    else {
+                                        if (currdt[n] != undefined) {
+                                            f[n] = currdt[n];
+                                        }
+                                    }
+
+                                }
+                            }
+                            else {
+                                if (n == "Field" && (elemid == "btninfoform" || elemid == "gridbtninfoform")) {
+                                    let btnlistid = elemid == "btninfoform" ? "btnlist" : "gridbtnlist";
+                                    let elems = $('#' + btnlistid).children();
+                                    $.each(elems, function (i, e) {
+                                        if ($(e).children().first().val() == f[n]) {
+                                            $(e).children().first().val(currdt[n]);
+                                            $(e).find('span').text(currdt[n]);
+                                            return false;
+                                        }
+                                    });
+                                    f[n] = currdt[n];
+                                    f['Fieldtitle'] = f[n];
+                                }
+                            }
+                        });
+                        return false;
+                    }
+                });
+                currfield = null;
+            }
+        }
+
+        function btnyes() {
+            if (currtabId == 'datasourcetab') {
+                savecurrfield('FieldattrSetting');
+            }
+            else if (currtabId == 'gridtooltab') {
+                savecurrfield('gridbtninfoform');
+            }
+            //savecurrfield('FieldattrSetting');
+            var dtfields = [];
+            var dttimes = [];
+            let currctr;
+            controls.forEach(function (c) {
+                if (c.ID == selected[0].id) {
+                    let currdt = form.val('DataSourceSetting');
+                    let currdt2 = form.val('StyleSetting');
+                    c.DataSourceNm = currdt.DataSourceNm;
+                    c.TableNm = currdt.TableNm;
+                    c.title = currdt2.title;
+                    c.btalismn = currdt.btalismn;
+                    selected[0].firstChild.firstChild.textContent = currdt2.title;
+                    currctr = c;
+                }
+            });
+            doInitialElement(currctr);
+        }
+
+        function doInitialElement(currctr) {
+            var dtfields = [];
+            var dttimes = [];
+            var ctrlcontentelem = document.getElementById(currctr.ID + "_content");
+            ctrlcontentelem.innerHTML = "";
+            //var gettpl;
+            if (currctr.ControlType == 1) {//colla 控件
+                fields.forEach(function (f) {
+                    if (f.ID == currctr.ID && !f.IsHide) {
+                        if (f.ElemType == 1 || f.ElemType == 9) {//singleinputTpl
+                            DoRenderTplHtml('singleinputTpl', ctrlcontentelem, f, true);
+                        }
+                        else if (f.ElemType == 2) {//MultinputTpl
+                            DoRenderTplHtml('MultinputTpl', ctrlcontentelem, f, true);
+                        }
+                        else if (f.ElemType == 4 || f.ElemType == 5) {//dateTpl
+                            DoRenderTplHtml('dateTpl', ctrlcontentelem, f, true);
+                            if (f.ElemType == 4)
+                                dtfields.push(f.ID + "_" + f.Field);
+                            else if (f.ElemType == 5) {
+                                dttimes.push(f.ID + "_" + f.Field);
+                            }
+                        }
+                        else if (f.ElemType == 3) {//selectTpl
+                            DoRenderTplHtml('selectTpl', ctrlcontentelem, f, true);
+                            form.render('select');
+                            getFieldOptions(f.ID, currctr.TableNm, f.Field);
+                        }
+                        else if (f.ElemType == 8) {//imgtpl
+                            DoRenderTplHtml('imgtpl', ctrlcontentelem, f, true);
+                        }
+                        else if (f.ElemType == 10) {//searchinputTpl
+                            DoRenderTplHtml('searchinputTpl', ctrlcontentelem, f, true);
+                        }
+                        else if (f.ElemType == 6) {//checkboxTpl
+                            DoRenderTplHtml('checkboxTpl', ctrlcontentelem, f, true);
+                        }
+
+                    }
+                });
+                ctrlcontentelem.innerHTML = "<div class=\"layui-form-item\">" + ctrlcontentelem.innerHTML + "</div>";
+                form.render();
+            }
+            else if (currctr.ControlType == 2) {//grid 控件
+                DoRenderTplHtml('gridTpl', ctrlcontentelem, currctr, true);
+                var gd = new appgrid(currctr.ID + "_gridvm");
+                gd.$table.url = "/AppSys/BindDataGrid";
+                gd.$table.toolbarid = "appgrid_toolbar";
+                gd.$table.title = "功能列表";
+                gd.$table.isSimple = false;
+                gd.$table.totalRow = true;
+                let col;
+                let btns = [];
+                fields.forEach(function (f) {
+                    if (f.ElemType == -1) {
+                        btns.push(f);
+
+                    }
+                    else if (f.ID == currctr.ID && !f.IsHide) {
+                        col = new gd.column(f.Field, f.Fieldtitle);
+                        gd.$table.columns.push(col);
+                    }
+                });
+                gd.initialTable();
+                gd.DataLoad = function (res, curr, count) {
+                    let o = $('#' + currctr.ID + '_content').find('.layui-btn-group')[0];
+                    btns.forEach(function (btn) {
+                        //let o = document.getElementById("appgrid_toolbar").children.item(0);
+                        DoRenderTplHtml('gridtoolbtnTpl', o, btn, true);
+                    });
+                }
+            }
+            dtfields.forEach(function (dt) {
+                layui.laydate.render({
+                    elem: '#' + dt
+                    , format: 'yyyy-MM-dd'
+                });
+            });
+            dttimes.forEach(function (dt) {
+                layui.laydate.render({
+                    elem: '#' + dt
+                    , type: 'datetime'
+                    , format: 'yyyy-MM-dd'
+                });
+            });
+            element.init();
+        }
+
+        function save() {
+            if (pageobj == null || pageobj == undefined || pageobj.progNm == null
+                || pageobj.progNm == undefined || pageobj.progNm == '') {
+                //appComfirmBox('功能基本信息')
+                appComfirmBox('功能基本信息', 'comfirmboxtest', true, function () {
+                    let proginfo = form.val('progform');
+                    //pageobj = proginfo;
+                    $.each(pageobj, function (n, v) {
+                        let exisnm = false;
+                        $.each(proginfo, function (n2, v2) {
+                            if (n == n2) {
+                                exisnm = true;
+                                if (typeof (pageobj[n]) == "boolean") {
+                                    pageobj[n] = v2 == "on" ? true : false;
+                                }
+                                else
+                                    pageobj[n] = v2;
+                                return false;
+                            }
+                        });
+                        if (!exisnm && typeof (pageobj[n]) == "boolean")
+                            pageobj[n] = false;
+                    });
+                    //pageobj = proginfo;
+                    dosave();
+                });
+            }
+            else {
+                dosave();
+            }
+        }
+        function dosave() {
+            let clientdata = [], clientDataInfo;
+            let prog = new LibClientDatas();
+            prog.TableNm = "ProgInfo";
+
+            clientDataInfo = new LibClientDataInfo();
+            clientDataInfo.clientDataStatus = operatStatu;
+            clientDataInfo.Datas = pageobj;
+            prog.ClientDataInfos.push(clientDataInfo);
+            clientdata.push(prog);
+
+            let progcontrols = new LibClientDatas();
+            progcontrols.TableNm = "ProgControlInfo";
+            clientdata.push(progcontrols);
+
+            //controls.forEach(function (o) {
+            //    o.progNm = pageobj.progNm;
+            //    clientDataInfo = new LibClientDataInfo();
+            //    clientDataInfo.clientDataStatus = 1;
+            //    clientDataInfo.Datas = o;
+            //    progcontrols.ClientDataInfos.push(clientDataInfo);
+            //});
+            $.each(controls, function (i, o) {
+                o.progNm = pageobj.progNm;
+                o.OrderNo = i;
+                clientDataInfo = new LibClientDataInfo();
+                //if (o.status != undefined && o.status==2)
+                clientDataInfo.clientDataStatus = o.status == undefined ? 1 : o.status;
+                clientDataInfo.Datas = o;
+                progcontrols.ClientDataInfos.push(clientDataInfo);
+            });
+
+            let fieldcontrol = new LibClientDatas();
+            fieldcontrol.TableNm = "ProgFieldInfo";
+            clientdata.push(fieldcontrol);
+            $.each(fields, function (i, o) {
+                o.progNm = pageobj.progNm;
+                o.OrderNo = i;
+                clientDataInfo = new LibClientDataInfo();
+                clientDataInfo.clientDataStatus = o.status == undefined ? 1 : o.status;
+                clientDataInfo.Datas = o;
+                fieldcontrol.ClientDataInfos.push(clientDataInfo);
+            });
+
+            //var str = JSON.stringify(dt);
+            $.ajax({
+                type: 'post',
+                url: '/AppSys/Prog/Update/ProgInfo',
+                data: JSON.stringify(clientdata),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                success: function (respon) {
+                    layer.msg(respon.Message, { icon: (respon.IsSuccess ? 1 : 2), time: 5000 });
+                },
+                error: function (msg) {
+                    layer.msg(respon.Message, { icon: (respon.IsSuccess ? 1 : 2), time: 5000, shade: [0.3, '#000', true] });
+                }
+            });
+        }
+        function gridbtnfunc() {
+            return false;
+        }
+        function fieldlistclick(obj) {
+            let s = $(obj).find(".layui-unselect");
+            let ctr;
+            let data = $(obj).children().first();
+            let v = data.val();
+            let listid = $(obj).parent().attr("id");
+            let fieldinfoid = '';
+            let allfieldelem = $('#' + listid).children();
+            $.each(allfieldelem, function (i, f) {
+                $(f).find(".layui-unselect").removeClass("layui-form-checked");
+            });
+            s.addClass("layui-form-checked");
+
+            controls.forEach(function (o) {
+                if (o.ID == selected[0].id)
+                    ctr = o;
+            });
+            if (listid == 'fieldlist') {
+                fieldinfoid = 'FieldattrSetting';
+                //savecurrfield('FieldattrSetting');
+            }
+            else if (listid == 'btnlist') {
+                fieldinfoid = 'btninfoform';
+                //savecurrfield('btninfoform');
+            }
+            else if (listid == 'gridbtnlist') {
+                fieldinfoid = 'gridbtninfoform';
+            }
+            savecurrfield(fieldinfoid);
+            fields.forEach(function (o) {
+                if (o.ID == ctr.ID && o.Field == v) {
+                    currfield = o;
+                    form.val(fieldinfoid, JSON.parse(JSON.stringify(currfield)));
+                    return false;
+                }
+            });
+        }
+        function fieldmousedown(obj) {
+            isdown = true;
+            x1 = event.clientX;
+            y1 = event.clientY;
+            $('#x1').text($(obj).width());
+            $('#y1').text($(obj).height());
+            dragfield = obj;
+
+        }
+        function fieldmousemove(obj) {
+            if (isdown && dragfield != undefined && dragfield != null) {
+                let x2 = event.clientX - x1;
+                let y2 = event.clientY - y1;
+                yoffset = parseInt(y2 / $(dragfield).height());
+                //if (v > 0) {//下移动
+
+                //}
+                //else {//上移动
+
+                //}
+                //$('#x2').text(v);
+                //$('#y2').text(y2);
+            }
+        }
+        function fieldmouseUp(obj) {
+            let ctr;
+            let data = $(dragfield).children().first();
+            let v = data.val();
+            if (isdown && currfield != undefined && currfield != null && v == currfield.Field) {
+                controls.forEach(function (o) {
+                    if (o.ID == selected[0].id)
+                        ctr = o;
+                });
+                $.each(fields, function (i, o) {
+                    if (o.ID == ctr.ID && o.Field == v) {
+                        let item = fields.splice(i, 1);
+                        fields.splice(i + yoffset, 0, item[0]);
+                        return false;
+                    }
+                });
+                let fieldlist = $('#' + $(obj).parent().attr("id")).children();
+                let index = -1;
+                //fieldlist.children().item(index).remove();
+                $.each(fieldlist, function (i, elem) {
+                    if (elem == dragfield) {
+                        //$(elem).remove();
+                        index = i + yoffset;
+                        return false;
+                    }
+                });
+                $.each(fieldlist, function (i, elem) {
+                    if (i == index) {
+                        if (yoffset > 0)
+                            $(dragfield).insertAfter(elem);
+                        else if (yoffset < 0) {
+                            $(dragfield).insertBefore(elem);
+                        }
+                        return false;
+                    }
+                });
+                //fieldlist.children().insertAfter(dragfield);
+                element.init();
+            }
+            yoffset = 0;
+            isdown = false;
+            dragfield = null;
+        }
+        function getBindTable() {
+            let tbs = [];
+            controls.forEach(function (o) {
+                if (o.TableNm != undefined) {
+                    tbs.push({ tableNm: o.TableNm, tableDesc: o.TableNm });
+                }
+            });
+            return tbs;
+        }
+
+    </script>
+    <!--按钮控件相关-->
+    <script>
+        var appbtncout = 1;
+        function addbtn(obj) {
+            let currctr;
+            if (selected.length == 0) {
+                return;
+            }
+            controls.forEach(function (o) {
+                if (o.ID == selected[0].id)
+                    currctr = o;
+            });
+            let elemtype = $(obj).attr("data-elemtype");
+            let elemid = 'btnlist';
+            let btn = new FieldObj();
+            btn.ID = currctr.ID;
+            btn.Field = 'btnNm' + appbtncout;
+            btn.Fieldtitle = btn.Field;
+            btn.OrderNo = appbtncout;
+            if (elemtype != undefined && elemtype != null && elemtype == '-1') {
+                btn.ElemType = -1;
+                elemid = 'gridbtnlist';
+            }
+            fields.push(btn);
+            appbtncout++;
+            let data = [];
+            data.push({ fieldNm: btn.Field, fieldDesc: btn.Fieldtitle });
+            RenderTplHtml('fldlistTpl', elemid, data, true);
+            element.init();
+        }
+
+        function btnyes2() {
+            savecurrfield('btninfoform');
+            let currctr;
+            controls.forEach(function (c) {
+                if (c.ID == selected[0].id) {
+                    currctr = c;
+                }
+            });
+            document.getElementById(currctr.ID + "_group").innerHTML = "";
+            fields.forEach(function (f) {
+                if (f.ID == currctr.ID) {
+                    RenderTplHtml('btnTpl', currctr.ID + "_group", f, true);
+                }
+            });
+        }
+    </script>
+    <script id="dsTpl" type="text/html">
+        <!--<select name="DataSource" lay-verify="required" lay-filter="DataSource">-->
+        <option value=""></option>
+        {{# for(var i = 0; i < d.length; i++){ }}
+        <option value="{{ d[i].dsNm }}">{{ d[i].dsDesc }}</option>
+
+        {{# } }}
+        <!--</select>-->
+    </script>
+    <script id="tbTpl" type="text/html">
+        <option value=""></option>
+        {{# for(var i = 0; i < d.length; i++){ }}
+        <option value="{{ d[i].tableNm }}">{{ d[i].tableDesc }}</option>
+        {{# } }}
+    </script>
+    <!--<script id="fldTpl" type="text/html">
+        <option value=""></option>
+        {{# for(var i = 0; i < d.length; i++){ }}
+        <option value="{{ d[i].fieldNm }}">{{ d[i].fieldDesc }}</option>
+        {{# } }}
+    </script>-->
+    <script id="fldlistTpl" type="text/html">
+        {{# for(var i = 0; i < d.length; i++){ }}
+        <li onclick="fieldlistclick(this)" onmousedown="fieldmousedown(this)" onmouseup="fieldmouseUp(this)" onmousemove="fieldmousemove(this)">
+            <input type="checkbox" name="layTransferLeftCheck" lay-skin="primary" lay-filter="layTransferCheckbox" title="{{ d[i].fieldDesc }}" value="{{ d[i].fieldNm }}">
+            <div class="layui-unselect layui-form-checkbox" lay-skin="primary">
+                <span>{{ d[i].fieldDesc }}</span>
+                <i class="layui-icon layui-icon-ok"></i>
+            </div>
+        </li>
+        {{# } }}
+    </script>
+
+    <script id="fieldtypeTpl" type="text/html">
+        <option value=""></option>
+        {{# for(var i = 0; i < d.length; i++){ }}
+        <option value="{{ d[i].key }}">{{ d[i].value }}</option>
+        {{# } }}
+    </script>
+
+    <script id="gridTpl" type="text/html">
+        <table class="layui-hide" id="{{ d.ID }}_gridvm" lay-filter="{{ d.ID }}_gridvm"></table>
+    </script>
+    <script type="text/html" id="appgrid_toolbar">
+        <div class="layui-btn-group">
+            <button class="layui-btn layui-btn-sm layui-icon layui-icon-add-1" onclick="return gridbtnfunc()"></button>
+            <button class="layui-btn layui-btn-sm layui-icon layui-icon-edit" onclick="return gridbtnfunc()"></button>
+            <button class="layui-btn layui-btn-sm layui-icon layui-icon-delete" onclick="return gridbtnfunc()"></button>
+        </div>
+    </script>
+
+    <!--单行文本元素-->
+    <script id="singleinputTpl" type="text/html">
+        {{# if(d.IsOnline){}}
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ d.Fieldtitle }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="{{ d.Field }}" lay-verify="{{ d.Field }}" autocomplete="off" placeholder="{{ d.Fieldtitle }}" class="layui-input">
+            </div>
+        </div>
+        {{# } else{ }}
+        <div class="layui-inline">
+            <label class="layui-form-label">{{ d.Fieldtitle }}</label>
+            <div class="layui-input-block">
+                <input type="text" name="{{ d.Field }}" lay-verify="{{ d.Field }}" autocomplete="off" placeholder="{{ d.Fieldtitle }}" class="layui-input">
+            </div>
+        </div>
+        {{# } }}
+
+    </script>
+    <!--多行文本元素-->
+    <script id="MultinputTpl" type="text/html">
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">{{ d.Fieldtitle }}</label>
+            <div class="layui-input-block">
+                <textarea placeholder="请输入内容" class="layui-textarea" name="{{ d.Field }}"></textarea>
+            </div>
+        </div>
+    </script>
+    <!--日期元素-->
+    <script id="dateTpl" type="text/html">
+        {{# if(d.IsOnline){}}
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ d.Fieldtitle }}</label>
+            <div class="layui-input-block">
+                <input id="{{ d.Field }}" type="text" name="{{ d.ID }}_{{ d.Field }}" lay-verify="date" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        {{# } else { }}
+        <div class="layui-inline">
+            <label class="layui-form-label">{{ d.Fieldtitle }}</label>
+            <div class="layui-input-block">
+                <input id="{{ d.Field }}" type="text" name="{{ d.ID }}_{{ d.Field }}" lay-verify="date" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        {{# } }}
+    </script>
+
+    <!--下拉选项元素-->
+    <script id="selectTpl" type="text/html">
+        {{# if(d.IsOnline){}}
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ d.Fieldtitle }}</label>
+            <div class="layui-input-block">
+                <select id="{{ d.ID }}_{{ d.Field }}_option" name="{{ d.Field }}" lay-verify="required" lay-filter="{{ d.Field }}">
+                </select>
+            </div>
+        </div>
+        {{# } else { }}
+        <div class="layui-inline">
+            <label class="layui-form-label">{{ d.Fieldtitle }}</label>
+            <div class="layui-input-block">
+                <select id="{{ d.ID }}_{{ d.Field }}_option" name="{{ d.Field }}" lay-verify="required" lay-filter="{{ d.Field }}">
+                </select>
+            </div>
+        </div>
+        {{# } }}
+    </script>
+
+    <!--图片上控件-->
+    <script id="imgtpl" type="text/html">
+        <div class="container">
+            <img id="app_img_{{d.Field}}" src="/images/0.jpg" class="img-responsive" data-id="{{d.Field}}" onclick="ShowImgFile(this)" style="cursor:pointer" alt="Cinque Terre" width="200" height="200" />
+            <input type="file" id="{{d.Field}}" name="{{d.Field}}" style="display:none" accept="image/*" onchange="LoadImgToUI(this)" />
+        </div>
+    </script>
+
+    <!--复选框控件-->
+    <script id="checkboxTpl" type="text/html">
+        {{# if(d.IsOnline){}}
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ d.Fieldtitle }}</label>
+            <div class="layui-input-block">
+                <input id="{{ d.Field }}"  type="checkbox"  name="{{ d.ID }}_{{ d.Field }}" lay-skin="switch" lay-verify="{{ d.Field }}"  lay-text="是|否">
+            </div>
+        </div>
+        {{# } else { }}
+        <div class="layui-inline">
+            <label class="layui-form-label">{{ d.Fieldtitle }}</label>
+            <div class="layui-input-block">
+                <input id="{{ d.Field }}" type="checkbox"  name="{{ d.ID }}_{{ d.Field }}" lay-skin="switch" lay-verify="{{ d.Field }}"  lay-text="是|否">
+            </div>
+        </div>
+        {{# } }}
+    </script>
+
+    <!--按钮元素-->
+    <script id="btnTpl" type="text/html">
+        <button id="{{ d.Field }}" type="button" class="layui-btn">{{ d.Fieldtitle }}</button>
+    </script>
+
+    <!--表格工具栏按钮元素-->
+    <script id="gridtoolbtnTpl" type="text/html">
+        <!--<button id="{{ d.Field }}" type="button" class="layui-btn">{{ d.Fieldtitle }}</button>-->
+        <button id="{{ d.Field }}" class="layui-btn layui-btn-sm" onclick="return gridbtnfunc()">{{ d.Fieldtitle }}</button>
+    </script>
+
+    <!--搜索控件元素-->
+    <script id="searchinputTpl" type="text/html">
+        {{# if(d.IsOnline){}}
+        <div class="layui-form-item">
+            <label class="layui-form-label">{{ d.Fieldtitle }}</label>
+            <div class="layui-input-block">
+                <input id="{{ d.ID }}_{{ d.Field }}" type="text" name="{{ d.Field }}" lay-verify="{{# if(d.IsRequired){ }}required{{# } }}" lay-reqtext="必填"
+                       autocomplete="off" placeholder="{{ d.Field }}" {{# if(d.OnlyRead){ }} readonly {{# } }} class="layui-input {{# if(d.OnlyRead){ }}layui-disabled{{# } }}">
+                <button type="button" class="layui-btn layui-icon layui-icon-search"></button>
+            </div>
+        </div>
+        {{# } else{ }}
+        <div class="layui-inline">
+            <label class="layui-form-label">{{ d.Fieldtitle }}</label>
+            <div class="layui-input-inline">
+                <input id="{{ d.ID }}_{{ d.Field }}" type="text" name="{{ d.Field }}"
+                       lay-verify="{{# if(d.IsRequired){ }}required{{# } }}" autocomplete="off"
+                       placeholder="{{ d.Field }}" {{# if(d.OnlyRead){ }} readonly {{# } }} class="layui-input {{# if(d.OnlyRead){ }}layui-disabled{{# } }}">
+            </div>
+            <button type="button" class="layui-btn layui-icon layui-icon-search"></button>
+        </div>
+        {{# } }}
+
+    </script>
+</head>
+<body>
+    <div class="layui-btn-container">
+        <div class="layui-btn-group">
+            <!--<button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-radio" onclick="createfunc(true)">新建普通功能</button>
+    <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-layer" onclick="beginaddnode(false)">新建特殊功能</button>-->
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-layer" onclick="addcolla()">添加面板</button>
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-table" onclick="addgrid()">添加表格</button>
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-util" onclick="addbtngroup()">添加按钮组</button>
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-ok-circle" onclick="save()">保存</button>
+            <!--<button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-edit" onclick="Initialdata()">继续编辑</button>-->
+            <button id="btnformselect" data-method="btnformselect" data-type="auto" class="layui-btn-primary layui-btn-sm layui-icon" style="display:none" onclick="test()">测试</button>
+            <button data-method="datainfo" class="layui-btn-primary layui-btn-sm layui-icon layui-icon-list">属性</button>
+            <button data-method="proginfo" class="layui-btn-primary layui-btn-sm layui-icon layui-icon-list">功能属性</button>
+            <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-delete" onclick="deletctrl()">删除选中</button>
+            <button data-method="SearchProg" class="layui-btn-primary layui-btn-sm layui-icon layui-icon-search">查询功能</button>
+        </div>
+    </div>
+    <div style="height:5px"></div>
+    <form class="layui-form" action="" lay-filter="formdata">
+        <div id="pagecontent" class="layui-main">
+        </div>
+    </form>
+    <div id="ndinfo" style="display:none">
+        <div class="layui-tab layui-tab-brief" lay-filter="appcontrolAttr">
+            <div>
+                <ul class="layui-tab-title">
+                    <li class="layui-this" lay-id="baseattrtab">基本属性设置</li>
+                    <li lay-id="datasourcetab">数据源设置</li>
+                    <li id="app_gridtooltab" lay-id="gridtooltab" style="display:none">工具栏设置</li>
+                </ul>
+            </div>
+            <div class="layui-tab-content">
+                <!--基本属性设置-->
+                <div class="layui-tab-item layui-show">
+                    <form class="layui-form" action="" lay-filter="StyleSetting">
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">ID</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="ID" required lay-verify="required" readonly placeholder="请输入id" autocomplete="off" class="layui-input layui-disabled">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">标题</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="title" required lay-verify="required" placeholder="请输入标题" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">背景色</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="backgroupcolor" required lay-verify="required" placeholder="请输入色值" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <!--数据源设置-->
+                <div class="layui-tab-item">
+                    <form class="layui-form" action="" lay-filter="DataSourceSetting">
+                        <div class="layui-form-item">
+                            <div class="layui-inline">
+                                <label class="layui-form-label">数据源</label>
+                                <div class="layui-input-block">
+                                    <select id="DataSource" name="DataSourceNm" lay-verify="required" lay-filter="DataSourceNm">
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="layui-inline">
+                                <label class="layui-form-label">数据表</label>
+                                <div class="layui-input-block">
+                                    <select id="TableInfo" name="TableNm" lay-verify="required" lay-filter="TableNm">
+                                        <option value=""></option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="layui-inline">
+                                <label class="layui-form-label">表别名</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="btalismn" required lay-verify="required" placeholder="请输入表别名" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                            <!--<div class="layui-inline">
+                    <label class="layui-form-label">字段</label>
+                    <div class="layui-input-block">
+                        <select id="fieldInfo" name="Field" lay-verify="required" lay-filter="Field">
+                            <option value=""></option>
+                        </select>
+                    </div>
+                </div>-->
+                        </div>
+                    </form>
+                    <fieldset class="layui-elem-field layui-field-title" style="margin-top: 20px;">
+                        <legend>字段绑定控件属性</legend>
+                    </fieldset>
+                    <div class="layui-row">
+                        <div class="layui-col-xs2">
+                            <div class="layui-transfer layui-form layui-border-box">
+                                <div class="layui-transfer-box" data-index="0" style="height: 410px;">
+                                    <div class="layui-transfer-header">
+                                        <input type="checkbox" name="layTransferLeftCheckAll" lay-filter="layTransferCheckbox" lay-type="all" lay-skin="primary" title="候选字段">
+                                        <div class="layui-unselect layui-form-checkbox" lay-skin="primary">
+                                            <span>候选字段</span><i class="layui-icon layui-icon-ok"></i>
+                                        </div>
+                                    </div>
+                                    <ul id="fieldlist" class="layui-transfer-data" style="height: 370px;">
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <form class="layui-form" action="" lay-filter="FieldattrSetting">
+                            <div class="layui-col-xs10">
+                                <div class="layui-form-item">
+                                    <div class="layui-inline">
+                                        <label class="layui-form-label">是否隐藏</label>
+                                        <div class="layui-input-block">
+                                            <input type="checkbox" checked="" name="IsHide" lay-skin="switch" lay-filter="IsHide" lay-text="是|否">
+                                        </div>
+                                    </div>
+                                    <div class="layui-inline">
+                                        <label class="layui-form-label">是否只读</label>
+                                        <div class="layui-input-block">
+                                            <input type="checkbox" checked="" name="OnlyRead" lay-skin="switch" lay-filter="OnlyRead" lay-text="是|否">
+                                        </div>
+                                    </div>
+                                    <div class="layui-inline">
+                                        <label class="layui-form-label">是否必填</label>
+                                        <div class="layui-input-block">
+                                            <input type="checkbox" checked="" name="IsRequired" lay-skin="switch" lay-filter="IsRequired" lay-text="是|否">
+                                        </div>
+                                    </div>
+                                    <div class="layui-inline">
+                                        <label class="layui-form-label">是否单行</label>
+                                        <div class="layui-input-block">
+                                            <input type="checkbox" checked="" name="IsOnline" lay-skin="switch" lay-filter="IsOnline" lay-text="是|否">
+                                        </div>
+                                    </div>
+                                    <div class="layui-inline">
+                                        <label class="layui-form-label">只输入数字</label>
+                                        <div class="layui-input-block">
+                                            <input type="checkbox" checked="" name="IsNumber" lay-skin="switch" lay-filter="IsNumber" lay-text="是|否">
+                                        </div>
+                                    </div>
+                                    <!--<div class="layui-inline">
+            <label class="layui-form-label">Onchange事件</label>
+            <div class="layui-input-block">
+                <input type="checkbox" checked="" name="Onchange" lay-skin="switch" lay-filter="Onchange" lay-text="是|否">
+            </div>
+        </div>
+        <div class="layui-inline">
+            <label class="layui-form-label">Onclick事件</label>
+            <div class="layui-input-block">
+                <input type="checkbox" checked="" name="Onclick" lay-skin="switch" lay-filter="Onclick" lay-text="是|否">
+            </div>
+        </div>
+        <div class="layui-inline">
+            <label class="layui-form-label">Onfocus事件</label>
+            <div class="layui-input-block">
+                <input type="checkbox" checked="" name="Onfocus" lay-skin="switch" lay-filter="Onfocus" lay-text="是|否">
+            </div>
+        </div>-->
+                                </div>
+                                <div class="layui-form-item">
+                                    <div class="layui-inline">
+                                        <label class="layui-form-label">Onchange事件</label>
+                                        <div class="layui-input-block">
+                                            <input type="checkbox" checked="" name="Onchange" lay-skin="switch" lay-filter="Onchange" lay-text="是|否">
+                                        </div>
+                                    </div>
+                                    <div class="layui-inline">
+                                        <label class="layui-form-label">Onclick事件</label>
+                                        <div class="layui-input-block">
+                                            <input type="checkbox" checked="" name="Onclick" lay-skin="switch" lay-filter="Onclick" lay-text="是|否">
+                                        </div>
+                                    </div>
+                                    <div class="layui-inline">
+                                        <label class="layui-form-label">Onfocus事件</label>
+                                        <div class="layui-input-block">
+                                            <input type="checkbox" checked="" name="Onfocus" lay-skin="switch" lay-filter="Onfocus" lay-text="是|否">
+                                        </div>
+                                    </div>
+                                    <div class="layui-inline">
+                                        <label class="layui-form-label">Onblur事件</label>
+                                        <div class="layui-input-block">
+                                            <input type="checkbox" checked="" name="Onblur" lay-skin="switch" lay-filter="Onblur" lay-text="是|否">
+                                        </div>
+                                    </div>
+                                    <div class="layui-inline">
+                                        <label class="layui-form-label">OnKeydown事件</label>
+                                        <div class="layui-input-block">
+                                            <input type="checkbox" checked="" name="OnKeydown" lay-skin="switch" lay-filter="OnKeydown" lay-text="是|否">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <div class="layui-inline">
+                                        <label class="layui-form-label">元素类型</label>
+                                        <div class="layui-input-block">
+                                            <select id="fieldelemtype" name="ElemType" lay-verify="required">
+                                                <option value=""></option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="layui-inline">
+                                        <label class="layui-form-label">字段长度</label>
+                                        <div class="layui-input-block">
+                                            <input type="text" name="FieldLength" placeholder="请输入字段长度" autocomplete="off" class="layui-input">
+                                        </div>
+                                    </div>
+                                    <div class="layui-inline">
+                                        <label class="layui-form-label">默认值</label>
+                                        <div class="layui-input-inline">
+                                            <input type="text" name="DefaultValue" placeholder="请输入值" autocomplete="off" class="layui-input">
+                                        </div>
+                                        <button type="button" class="layui-btn layui-icon layui-icon-search"></button>
+                                    </div>
+                                    <!--<div class="layui-inline">
+            <label class="layui-form-label">来源表</label>
+            <div class="layui-input-block">
+                <input type="text" name="FromSourceTB" placeholder="请输入值" autocomplete="off" class="layui-input">
+            </div>
+        </div>-->
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">值有效性验证表达式：</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" name="ValidExpress" placeholder="请输入值" autocomplete="off" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">来源带出字段与赋值表达式：</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" name="RelateFieldExpress" placeholder="请输入值" autocomplete="off" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item layui-form-text">
+                                    <label class="layui-form-label">备注</label>
+                                    <div class="layui-input-block">
+                                        <textarea name="Remark" placeholder="请输入内容" class="layui-textarea"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <!--工具栏设置-->
+                <div class="layui-tab-item">
+                    <div class="layui-row">
+                        <div>
+                            <button type="button" class="layui-btn layui-btn-normal" data-elemtype="-1" onclick="addbtn(this)">添加按钮</button>
+                            <button type="button" class="layui-btn layui-btn-normal">删除按钮</button>
+                        </div>
+                        <div class="layui-col-xs2">
+                            <div class="layui-transfer layui-form layui-border-box">
+                                <div class="layui-transfer-box" data-index="0" style="height: 410px;">
+                                    <div class="layui-transfer-header">
+                                        <input type="checkbox" name="layTransferLeftCheckAll" lay-filter="layTransferCheckbox" lay-type="all" lay-skin="primary" title="按钮集">
+                                        <div class="layui-unselect layui-form-checkbox" lay-skin="primary">
+                                            <span>按钮集</span><i class="layui-icon layui-icon-ok"></i>
+                                        </div>
+                                    </div>
+                                    <ul id="gridbtnlist" class="layui-transfer-data" style="height: 370px;">
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <form class="layui-form" action="" lay-filter="gridbtninfoform">
+                            <div class="layui-col-xs10">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">按钮ID</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" name="Field" placeholder="请输入按钮ID" autocomplete="off" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">自定义点击事件</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" name="ClickFunc" placeholder="请输入函数名" autocomplete="off" class="layui-input">
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <!--附加动作-->
+                <!--<div class="layui-tab-item">4</div>-->
+                <!--数据源设置-->
+                <!--<div class="layui-tab-item">5</div>-->
+            </div>
+        </div>
+    </div>
+    <div id="comfirmboxtest" style="display:none">
+        <form class="layui-form" action="" lay-filter="progform">
+        <div class="layui-tab layui-tab-brief" lay-filter="proginfoTabBrief">
+            <div>
+                <ul class="layui-tab-title">
+                    <li class="layui-this">基本信息</li>
+                    <li>数据关系设置</li>
+                </ul>
+            </div>
+            <div class="layui-tab-content">
+                <!--<form class="layui-form" action="" lay-filter="progform">-->
+                <div class="layui-tab-item layui-show">
+                    <!--<div class="layui-main">-->
+                    <div class="layui-form-item">
+                        <div class="layui-inline">
+                            <label class="layui-form-label">功能名称：</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="progNm" lay-verify="required" lay-reqtext="功能名称是必填项" placeholder="请输入功能名称" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <!--<div class="layui-inline">-->
+                        <label class="layui-form-label">功能描述：</label>
+                        <div class="layui-input-block">
+                            <!--<textarea placeholder="请输入内容" class="layui-textarea" name="progDesc"></textarea>-->
+                            <input type="text" name="progDesc" lay-verify="required" lay-reqtext="功能描述是必填项" placeholder="请输入功能描述" autocomplete="off" class="layui-input">
+                        </div>
+                        <!--</div>-->
+                    </div>
+                    <div class="layui-form-item">
+                        <!--<div class="layui-inline">-->
+                        <label class="layui-form-label">API名称：</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="controllerNm" placeholder="请输入API名称" autocomplete="off" class="layui-input">
+                        </div>
+                        <!--</div>-->
+                    </div>
+                    <div class="layui-form-item">
+                        <!--<div class="layui-inline">-->
+                        <label class="layui-form-label">所属包：</label>
+                        <div class="layui-input-block">
+                            <!--<textarea placeholder="请输入内容" class="layui-textarea" name="progPackage"></textarea>-->
+                            <input type="text" name="progPackage" lay-verify="required" lay-reqtext="功能所属包是必填项" placeholder="请输入功能所属包" autocomplete="off" class="layui-input">
+                        </div>
+                        <!--</div>-->
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">自定义页面：</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="CustomPage"  placeholder="请输入页面名" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                    <!--</div>-->
+                    <div class="layui-form-item">
+                        <!--<div class="layui-inline">-->
+                        <label class="layui-form-label">是否挂菜单：</label>
+                        <div class="layui-input-block">
+                            <input type="checkbox" checked="" name="IsMenu" lay-skin="switch" lay-filter="IsMenu" lay-text="是|否">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <div class="layui-inline">
+                            <div class="layui-inline">
+                                <label class="layui-form-label">显示新增按钮</label>
+                                <div class="layui-input-block">
+                                    <input type="checkbox" checked="" name="HasAddbtn" lay-skin="switch" lay-filter="HasAddbtn" lay-text="是|否">
+                                </div>
+                            </div>
+                            <div class="layui-inline">
+                                <label class="layui-form-label">显示编辑按钮</label>
+                                <div class="layui-input-block">
+                                    <input type="checkbox" checked="" name="Haseditbtn" lay-skin="switch" lay-filter="Haseditbtn" lay-text="是|否">
+                                </div>
+                            </div>
+                            <div class="layui-inline">
+                                <label class="layui-form-label">显示删除按钮</label>
+                                <div class="layui-input-block">
+                                    <input type="checkbox" checked="" name="Hasdeletebtn" lay-skin="switch" lay-filter="Hasdeletebtn" lay-text="是|否">
+                                </div>
+                            </div>
+                            <div class="layui-inline">
+                                <label class="layui-form-label">显示复制按钮</label>
+                                <div class="layui-input-block">
+                                    <input type="checkbox" checked="" name="HasCopybtn" lay-skin="switch" lay-filter="HasCopybtn" lay-text="是|否">
+                                </div>
+                            </div>
+                            <div class="layui-inline">
+                                <label class="layui-form-label">显示查询按钮</label>
+                                <div class="layui-input-block">
+                                    <input type="checkbox" checked="" name="HasSearchbtn" lay-skin="switch" lay-filter="HasSearchbtn" lay-text="是|否">
+                                </div>
+                            </div>
+                            <div class="layui-inline">
+                                <label class="layui-form-label">显示日志查询按钮</label>
+                                <div class="layui-input-block">
+                                    <input type="checkbox" checked="" name="HasLogSearchbtn" lay-skin="switch" lay-filter="HasLogSearchbtn" lay-text="是|否">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layui-tab-item">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">主表：</label>
+                        <div class="layui-input-inline">
+                            <select id="MastTable" name="mastTable" lay-verify="required" lay-filter="mastTable">
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">表关联表达式：</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="tableRelation" lay-verify="required" lay-reqtext="表关联是必填项" placeholder="请设置表关联" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                </div>
+                <!--</form>-->
+            </div>
+        </div>
+        </form>
+    </div>
+    <div id="btngroupInfoBox" style="display:none">
+        <!--<form class="layui-form" action="" lay-filter="btngroupform">-->
+            <div class="layui-tab layui-tab-brief" lay-filter="btngroupTabBrief">
+                <div>
+                    <ul class="layui-tab-title">
+                        <li class="layui-this">基本信息</li>
+                        <li>按钮设置</li>
+                    </ul>
+                </div>
+                <div class="layui-tab-content">
+                    <!--基本信息-->
+                    <div class="layui-tab-item layui-show">
+                        <form class="layui-form" action="" lay-filter="btngroupform">
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">按钮组ID：</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="ID" required lay-verify="required" readonly lay-reqtext="按钮组ID是必填项" placeholder="请输入按钮组ID" autocomplete="off" class="layui-input layui-disabled">
+                                </div>
+                            </div>
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">背景色：</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="btngroupbgcolor" placeholder="" autocomplete="off" class="layui-input">
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <!--按钮设置-->
+                    <div class="layui-tab-item">
+                        <div class="layui-row">
+                            <div>
+                                <button type="button" class="layui-btn layui-btn-normal" onclick="addbtn(this)">添加按钮</button>
+                                <button type="button" class="layui-btn layui-btn-normal">删除按钮</button>
+                            </div>
+                            <div class="layui-col-xs2">
+                                <div class="layui-transfer layui-form layui-border-box">
+                                    <div class="layui-transfer-box" data-index="0" style="height: 410px;">
+                                        <div class="layui-transfer-header">
+                                            <input type="checkbox" name="layTransferLeftCheckAll" lay-filter="layTransferCheckbox" lay-type="all" lay-skin="primary" title="按钮集">
+                                            <div class="layui-unselect layui-form-checkbox" lay-skin="primary">
+                                                <span>按钮集</span><i class="layui-icon layui-icon-ok"></i>
+                                            </div>
+                                        </div>
+                                        <ul id="btnlist" class="layui-transfer-data" style="height: 370px;">
+
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <form class="layui-form" action="" lay-filter="btninfoform">
+                                <div class="layui-col-xs10">
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">按钮ID</label>
+                                        <div class="layui-input-block">
+                                            <input type="text" name="Field" placeholder="请输入按钮ID" autocomplete="off" class="layui-input">
+                                        </div>
+                                    </div>
+                                    <div class="layui-form-item">
+                                        <label class="layui-form-label">自定义点击事件</label>
+                                        <div class="layui-input-block">
+                                            <input type="text" name="ClickFunc" placeholder="请输入函数名" autocomplete="off" class="layui-input">
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        <!--</form>-->
+    </div>
+    <div id="searchProg" style="display:none">
+        <div>
+            ProgNm：
+            <div class="layui-inline">
+                <input class="layui-input" name="id" id="appsearchprogNm" autocomplete="off">
+            </div>
+            <button class="layui-btn" >查询</button>
+        </div>
+
+        <table class="layui-hide" id="appSearchProg" lay-filter="appSearchProg"></table>
+    </div>
+</body>
+</html>
+<script>
+    var pageobj = null, controls = [], fields = [], selected = [];
+    var pagecontent = document.getElementById("pagecontent");
+    var appserialNo = 0;
+    function addcolla() {
+        appserialNo += 1;
+        let controlid = "colla" + (appserialNo);
+        let title = '关键信息' + (appserialNo);
+        docreatecolla(controlid, title, 1);
+        //let o = CreateColla(controlid, title);
+        //var colladata = new ControlObj(controlid, title);
+        //colladata.ControlType = 1;
+        //controls.push(colladata);
+        //pagecontent.append(o);
+        //element.init();
+        //o.addEventListener("click", function (e) {
+        //    ClearSelected();
+        //    this.style.border = "1px solid red";
+        //    selected.push(this);
+        //});
+
+    }
+    function addgrid() {
+        appserialNo += 1;
+        let controlid = "grid" + appserialNo;
+        let title = '明细表' + appserialNo;
+        docreatecolla(controlid, title, 2);
+    }
+
+    function addbtngroup() {
+        appserialNo += 1;
+        let id = "btngroup" + appserialNo;
+        let btngroup = CreateBtnGroup(id);
+        pagecontent.append(btngroup);
+
+        let btnobj = new ControlObj(id, id);
+        btnobj.ControlType = 3;
+        controls.push(btnobj);
+        RenderTplHtml('btnTpl', id + "_group", btnobj, true);
+        element.init();
+
+        btngroup.addEventListener("click", function (e) {
+            ClearSelected();
+            this.style.border = "1px solid red";
+            selected.push(this);
+        });
+
+    }
+
+    function deletctrl() {
+        $.each(controls, function (i, o) {
+            if (o.ID == selected[0].id) {
+                if (o.status != 2) {
+                    controls.splice(i, 1);
+                }
+                else {
+                    o.status = 3;
+                }
+                document.getElementById(o.ID).remove();
+                return false;
+            }
+        });
+        let removes = [];
+        fields.forEach(function (o) {
+            if (o.ID == selected[0].id) {
+                removes.push(o);
+            }
+        });
+        removes.forEach(function (o) {
+            $.each(fields, function (i, f) {
+                if (f.ID == selected[0].id && f.Field == o.Field) {
+                    if (f.status != 2) {
+                        fields.splice(i, 1);
+                    }
+                    else
+                        f.status = 3;
+                    return false;
+                }
+            });
+        });
+
+
+    }
+
+    function docreatecolla(id, title, controltype) {
+        let o = CreateColla(id, title);
+        var colladata = new ControlObj(id, title);
+        colladata.ControlType = controltype;
+        controls.push(colladata);
+        pagecontent.append(o);
+        element.init();
+        o.addEventListener("click", function (e) {
+            ClearSelected();
+            this.style.border = "1px solid red";
+            selected.push(this);
+        });
+    }
+    function doinitialCtrl(ctrl) {
+        let o;
+        if (ctrl.ControlType == 1 || ctrl.ControlType == 2) {
+            o = CreateColla(ctrl.ID, ctrl.title);
+            pagecontent.append(o);
+            element.init();
+        }
+        else if (ctrl.ControlType == 3) {
+            o = CreateBtnGroup(ctrl.ID);
+            pagecontent.append(o);
+            RenderTplHtml('btnTpl', ctrl.ID + "_group", ctrl, true);
+            element.init();
+        }
+        o.addEventListener("click", function (e) {
+            ClearSelected();
+            this.style.border = "1px solid red";
+            selected.push(this);
+        });
+    }
+    function ClearSelected() {
+        selected.forEach(function (o) {
+            o.style.border = "";
+        });
+        selected.length = 0;
+    }
+
+</script>
