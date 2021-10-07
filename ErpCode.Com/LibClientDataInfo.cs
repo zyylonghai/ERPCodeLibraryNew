@@ -10,6 +10,12 @@ namespace ErpCode.Com
         public object OldDatas { get; set; }
         public List<LibPrimaryKeyInfo> PrimaryKeyInfos { get; set; }
         public LibClientDataStatus clientDataStatus { get; set; }
+
+        public string TableNm { get; set; }
+        /// <summary>
+        /// 用户写日志时，当前行的动作，即（1 新增，2 修改）
+        /// </summary>
+        public int LogAction { get; set; }
     }
     public enum LibClientDataStatus
     {

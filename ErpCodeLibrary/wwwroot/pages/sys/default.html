@@ -153,6 +153,7 @@
                                     doinitialCtrl(c);
                                     doInitialElement(c);
                                 });
+                                setbtndisable(false);
                             },
                             error: function (msg) {
 
@@ -653,6 +654,7 @@
                 contentType: 'application/json; charset=utf-8',
                 dataType: 'json',
                 success: function (respon) {
+                    setbtndisable(true);
                     layer.msg(respon.Message, { icon: (respon.IsSuccess ? 1 : 2), time: 5000 });
                 },
                 error: function (msg) {
@@ -777,6 +779,14 @@
             return tbs;
         }
 
+        function setbtndisable(disable) {
+            var btngp = $('#app_btngroup').children();
+            $.each(btngp, function (i, o) {
+                if ($(o).data("method") != "SearchProg") {
+                    dosetElementdisable(o, disable);
+                }
+            });
+        }
     </script>
     <!--按钮控件相关-->
     <script>
@@ -1009,7 +1019,7 @@
 </head>
 <body>
     <div class="layui-btn-container">
-        <div class="layui-btn-group">
+        <div id="app_btngroup" class="layui-btn-group">
             <!--<button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-radio" onclick="createfunc(true)">新建普通功能</button>
     <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-layer" onclick="beginaddnode(false)">新建特殊功能</button>-->
             <button class="layui-btn-primary layui-btn-sm layui-icon layui-icon-layer" onclick="addcolla()">添加面板</button>
@@ -1346,7 +1356,13 @@
                     <div class="layui-form-item">
                         <label class="layui-form-label">自定义页面：</label>
                         <div class="layui-input-block">
-                            <input type="text" name="CustomPage"  placeholder="请输入页面名" autocomplete="off" class="layui-input">
+                            <input type="text" name="CustomPage" placeholder="请输入页面名" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">脚本文件名：</label>
+                        <div class="layui-input-block">
+                            <input type="text" name="JsUrl" placeholder="请输入脚本文件" autocomplete="off" class="layui-input">
                         </div>
                     </div>
                     <!--</div>-->

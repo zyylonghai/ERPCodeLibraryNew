@@ -168,10 +168,27 @@ namespace ErpCode.AppDal
                 parameters[0] = new LibDbParameter { ParameterNm = "@clientid", DbType = DbType.String, Value = this.UserInfo.ClientId };
                 parameters[1] = new LibDbParameter { ParameterNm = "@tbnm", DbType = DbType.String, Value = tbnm };
                 var tbs = udb.Database.ExeStoredProcedureToData("p_GetUserTableFieldInfoBytbnm", parameters);
+                LibFieldInfo fieldInfo = null;
                 //var tbs = udb.U_TableFieldInfo.Where(i => i.TableNm  == tbnm && i.ClientId == this.UserInfo.ClientId && !i.IsDeleted).ToList();
                 foreach (DataRow item in tbs.Rows)
                 {
-                    result.Add(new LibFieldInfo { fieldNm = item["FieldNm"].ToString (), fieldDesc = item["FieldDesc"].ToString(), fieldType = (LibFieldType)item["DataType"] });
+                    LibDataType dtype = (LibDataType)item["DataType"];
+                    fieldInfo = new LibFieldInfo { fieldNm = item["FieldNm"].ToString(), fieldDesc = item["FieldDesc"].ToString()};
+                    switch (dtype)
+                    {
+                        case LibDataType.String:
+                        case LibDataType.Decimal:
+                        case LibDataType.Enums:
+                        case LibDataType.Search:
+                            fieldInfo.fieldType = (LibFieldType)item["DataType"];
+                            break;
+                        case LibDataType.Date:
+                        case LibDataType.DateTime:
+                            fieldInfo.fieldType = LibFieldType.Datetime;
+                            break;
+                           
+                    }
+                    result.Add(fieldInfo);
                 }
             }
             return result;

@@ -5,6 +5,7 @@
     this.controllerNm="";
     this.CustomPage = "";
     this.mastTable = "";
+    this.JsUrl = "";
     this.IsMenu = true;
     this.HasAddbtn = true;
     this.Haseditbtn = true;

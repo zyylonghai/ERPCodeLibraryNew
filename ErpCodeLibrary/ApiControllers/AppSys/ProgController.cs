@@ -19,8 +19,9 @@ namespace ErpCodeLibrary.ApiControllers.AppSys
     {
         public string GetProgData(int limit, int page)
         {
-            int total = this.tDal.dBContext.ProgInfo.Count();
-            var data = this.tDal.dBContext.ProgInfo.ToList().Skip(limit * (page - 1)).Take(limit).ToList();
+            var datas = this.tDal.dBContext.ProgInfo.Where(i => i.ClientId == this.UserInfo.ClientId && !i.IsDeleted);
+            int total = datas.Count();
+            var data = datas.Skip(limit * (page - 1)).Take(limit).ToList();
             var result = new { code = 0, msg = "success", count = total, data = data };
 
             return JsonConvert.SerializeObject(result);
@@ -196,7 +197,7 @@ namespace ErpCodeLibrary.ApiControllers.AppSys
             {
                 data = this.tDal.GetProgInfoData(this.ProgNm);
                 this.SessionData.ProgInfoData = data;
-                this.SessionData.AddDataExt(new SessionDataExtTest { A = "kdsjfksl", Models = new ProgModels() });
+                this.SessionData.AddDataExt("kkkkk", new SessionDataExtTest { A = "kdsjfksl", Models = new ProgModels() });
             }
             if (data == null)
             {

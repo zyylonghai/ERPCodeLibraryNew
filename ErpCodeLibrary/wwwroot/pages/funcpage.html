@@ -303,7 +303,7 @@
     }
 
     function PageLoad(proginfo) {
-        let _url = proginfo.IsDeveloper ? getUrl(proginfo.progPackage, proginfo.controllerNm, "PageLoaded") : "/Users/PageLoaded";
+        let _url = getUrl(proginfo.progPackage, proginfo.controllerNm, "PageLoaded");
         $.ajax({
             type: 'get',
             url: _url,

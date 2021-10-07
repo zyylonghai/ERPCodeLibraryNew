@@ -134,9 +134,9 @@
 
     function search() {
         grid.$table.where = { progNm: $('#DataSourceNm').val(), tbnm: $('#tbnm').val(), fieldnm: $('#fieldnm').val(), val: $('#val').val(), pageload: false };
-        grid.ReSetOptions();
+     /*   grid.ReSetOptions();*/
          //grid.$table.where = { progNm: "", tbnm: $('#app_currsearchtbnm').val(), fieldnm: "", val: "", pageload: true };
-        //grid.refreshData();
+        grid.refreshData();
     }
     function Add() {
         appComfirmBox("新增", "app_addModel", true, function () { });

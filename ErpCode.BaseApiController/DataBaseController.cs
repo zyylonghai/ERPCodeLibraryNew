@@ -504,7 +504,8 @@ namespace ErpCode.BaseApiController
             //StringBuilder whereformat = new StringBuilder();
             //SearchConditionHelper.AnalyzeSearchCondition(conditions, whereformat, ref values);
             //WhereObject where = new WhereObject { WhereFormat = whereformat.ToString (), Values = values };
-            this.SessionData.AddDataExt(conditions);
+            this.SessionData.AddDataExt("conditions",conditions);
+            this.SessionData.RemoveDataExt("searchdata");
             //CachHelp cach = new CachHelp();
             //cach.AddCachItem(string.Format("{0}_{1}searchcond", HttpContext.Session.Id, this.ProgNm), where, TimeOffset);
             //var data = this.tDal.SearchData(this.SessionData.ProgInfoData.progInfo.mastTable, where);
@@ -513,7 +514,7 @@ namespace ErpCode.BaseApiController
 
         public virtual string BindSearchDataGrid(string tbnm,LibSearchKind kind, int limit, int page)
         {
-            List<LibSearchCondition> conds = this.SessionData.GetDataExt<List<LibSearchCondition>>();
+            List<LibSearchCondition> conds = this.SessionData.GetDataExt<List<LibSearchCondition>>("conditions");
             object[] values = { };
             conds.Add(new LibSearchCondition { FieldNm = "ClientId", Logic = Smodallogic.And, Symbol = SmodalSymbol.Equal, valu1 = this.UserInfo.ClientId });
             StringBuilder whereformat = new StringBuilder();
@@ -521,9 +522,12 @@ namespace ErpCode.BaseApiController
             WhereObject where = new WhereObject { WhereFormat = whereformat.ToString(), Values = values };
             //CachHelp cach = new CachHelp();
             //WhereObject where =(WhereObject) cach.GetCach(string.Format("{0}_{1}searchcond", HttpContext.Session.Id, this.ProgNm));
-            var data = this.tDal.SearchData(string .IsNullOrEmpty(tbnm)? this.SessionData.ProgInfoData.progInfo.mastTable:tbnm, where);
+            var data = this.SessionData.GetDataExt<List<object>>("searchdata");
+            if (data == null || data.Count <=0)
+                data = this.tDal.SearchData(string.IsNullOrEmpty(tbnm) ? this.SessionData.ProgInfoData.progInfo.mastTable : tbnm, where);
             SearchDataExt(string.IsNullOrEmpty(tbnm) ? this.SessionData.ProgInfoData.progInfo.mastTable : tbnm, kind,ref data);
-            var result = new { code = 0, msg = "success", count = data.Count, data = data };
+            this.SessionData.AddDataExt("searchdata", data);
+            var result = new { code = 0, msg = "success", count = data.Count, data = data.Skip(limit * (page - 1)).Take(limit).ToList() };
             return JsonConvert.SerializeObject(result);
         }
         /// <summary> </summary>
@@ -774,7 +778,7 @@ namespace ErpCode.BaseApiController
                     //PropertyInfo[] ps = t.GetProperties();
                     foreach (LibClientDataInfo d in item.ClientDataInfos)
                     {
-                        List<DataLogsD> logs = this.tDal.SearchDataLogs(item.TableNm, (d.Datas as LibModelCore).app_logid);
+                        List<DataLogsD> logs = this.tDal.SearchDataLogs(item.TableNm, Getapplogid(d));
                         foreach (DataLogsD l in logs)
                         {
                             clientDatas.ClientDataInfos.Add(new LibClientDataInfo { Datas = l });
@@ -1036,6 +1040,13 @@ namespace ErpCode.BaseApiController
             
         }
         #endregion
+
+        #region 数据日志查询相关
+        protected virtual string Getapplogid(LibClientDataInfo d)
+        {
+            return (d.Datas as LibModelCore).app_logid;
+        }
+        #endregion 
 
         #endregion
 

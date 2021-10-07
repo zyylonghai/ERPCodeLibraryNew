@@ -30,7 +30,7 @@ namespace ErpCodeLibrary.ApiControllers.SYS
                 List<UserMenu> menus = ClientDataToModel<UserMenu>(exit.ClientDataInfos);
                 data = menus.Where(i => i.PmenuId == pid).ToList();
             }
-            this.SessionData.AddDataExt(pid);
+            this.SessionData.AddDataExt("pid",pid);
             return ReturnGridData("", data == null ? 0 : data.Count, data);
             //var result = new { code = 0, msg = "success", count = data == null ? 0 : data.Count, data = data };
 
@@ -39,7 +39,7 @@ namespace ErpCodeLibrary.ApiControllers.SYS
         protected override void GetTableActionExt(LibClientDatas clientDatas)
         {
             base.GetTableActionExt(clientDatas);
-            long pid = this.SessionData.GetDataExt<long>();
+            long pid = this.SessionData.GetDataExt<long>("pid");
             if (pid == -1)
             {
                 //msg000000010  请先选择一个节点。

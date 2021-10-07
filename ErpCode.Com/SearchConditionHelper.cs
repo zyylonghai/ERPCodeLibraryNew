@@ -66,10 +66,115 @@ namespace ErpCode.Com
             }
         }
 
-        //public static List<string> AnalyzeSearchConditionforUData(List<LibSearchCondition> conds, string custbnm, string clientid)
-        //{
-            
-        //}
+        public static string AnalyzeSearchConditionforUData(List<LibSearchCondition> conds, string custbnm, string clientid,string udatatbnm)
+        {
+            StringBuilder sql = new StringBuilder();
+            string selectstr = string.Empty;
+            string wherestr = string.Empty;
+            StringBuilder parms = new StringBuilder();
+            StringBuilder vstr = new StringBuilder();
+            int index = 0,xindex=1,vindx=0;
+            char aslinm = 'A';
+            string x = string.Empty;
+            string vcusttbnm = string.Format("@v{0}", vindx++);
+            string vclientid = string.Format("@v{0}", vindx++);
+            string vfieldnm = string.Empty, vfieldvalue = string.Empty;
+            parms.AppendFormat("{0} nvarchar(30)", vcusttbnm);
+            parms.AppendFormat(",{0} nvarchar(15)", vclientid);
+
+            vstr.AppendFormat("{0}='{1}'", vcusttbnm, custbnm);
+            vstr.AppendFormat(",{0}='{1}'", vclientid, clientid);
+            foreach (LibSearchCondition item in conds)
+            {
+                aslinm = (char)(65 + index);
+                x = string.Format("x{0}", xindex);
+                if (selectstr.Length <= 0)
+                {
+                    selectstr = string.Format("select {1}.FieldNm,{1}.FieldValue, {1}.app_logid from {0} {1} where ", udatatbnm, aslinm);
+                }
+                else
+                {
+                    selectstr = string.Format("select {1}.FieldNm,{1}.FieldValue, {1}.app_logid from {0} {1} inner join ({2}) {3} on {1}.app_logid={3}.app_logid where ", udatatbnm, aslinm, selectstr, x);
+                    xindex++;
+                }
+                vfieldnm = string.Format("@v{0}", vindx++);
+                vfieldvalue = string.Format("@v{0}", vindx++);
+                switch (item.Symbol)
+                {
+                    case SmodalSymbol.Equal:
+                        //wherestr = string.Format("{0}.FieldNm='{1}' and {0}.FieldValue='{2}' and {0}.TableNm='{3}' and {0}.ClientId='{4}'",
+                        //                        aslinm ,item.FieldNm ,item.valu1,custbnm ,clientid );
+                        wherestr = string.Format("{0}.FieldNm={1} and {0}.FieldValue={2} and {0}.TableNm={3} and {0}.ClientId={4}",
+                                                aslinm, vfieldnm, vfieldvalue, vcusttbnm, vclientid);
+                        vstr.AppendFormat(",{0}='{1}'", vfieldvalue, item.valu1);
+                        break;
+                    case SmodalSymbol.MoreThan:
+                        //wherestr = string.Format("{0}.FieldNm='{1}' and {0}.FieldValue>'{2}' and {0}.TableNm='{3}' and {0}.ClientId='{4}'",
+                        //                       aslinm, item.FieldNm, item.valu1, custbnm, clientid);
+                        wherestr = string.Format("{0}.FieldNm={1} and {0}.FieldValue>{2} and {0}.TableNm={3} and {0}.ClientId={4}",
+                                               aslinm, vfieldnm, vfieldvalue, vcusttbnm, vclientid);
+                        vstr.AppendFormat(",{0}='{1}'", vfieldvalue, item.valu1);
+                        break;
+                    case SmodalSymbol.LessThan:
+                        //wherestr = string.Format("{0}.FieldNm='{1}' and {0}.FieldValue<'{2}' and {0}.TableNm='{3}' and {0}.ClientId='{4}'",
+                        //                       aslinm, item.FieldNm, item.valu1, custbnm, clientid);
+                        wherestr = string.Format("{0}.FieldNm={1} and {0}.FieldValue<{2} and {0}.TableNm={3} and {0}.ClientId={4}",
+                                              aslinm, vfieldnm, vfieldvalue, vcusttbnm, vclientid);
+                        vstr.AppendFormat(",{0}='{1}'", vfieldvalue, item.valu1);
+                        break;
+                    case SmodalSymbol.Contains:
+                        //wherestr = string.Format("{0}.FieldNm='{1}' and {0}.FieldValue like '%{2}%' and {0}.TableNm='{3}' and {0}.ClientId='{4}'",
+                        //                       aslinm, item.FieldNm, item.valu1, custbnm, clientid);
+                        wherestr = string.Format("{0}.FieldNm={1} and {0}.FieldValue like {2} and {0}.TableNm={3} and {0}.ClientId={4}",
+                                             aslinm, vfieldnm, vfieldvalue, vcusttbnm, vclientid);
+                        vstr.AppendFormat(",{0}='%{1}%'", vfieldvalue, item.valu1);
+                        break;
+                    case SmodalSymbol.Between:
+                        //wherestr = string.Format("{0}.FieldNm='{1}' and {0}.FieldValue between '{2}' and '{3}'  and {0}.TableNm='{4}' and {0}.ClientId='{5}'",
+                        //                       aslinm, item.FieldNm, item.valu1,item.valu2, custbnm, clientid);
+                        string vfieldvalue2 = string.Format("@v{0}", vindx++);
+                        wherestr = string.Format("{0}.FieldNm={1} and {0}.FieldValue between {2} and {3} and {0}.TableNm={4} and {0}.ClientId={5}",
+                                            aslinm, vfieldnm, vfieldvalue,vfieldvalue2 , vcusttbnm, vclientid);
+                        vstr.AppendFormat(",{0}='{1}'", vfieldvalue, item.valu1);
+                        vstr.AppendFormat(",{0}='{1}'", vfieldvalue2, item.valu2);
+                        break;
+                    case SmodalSymbol.NoEqual:
+                        //wherestr = string.Format("{0}.FieldNm='{1}' and {0}.FieldValue !='{2}' and {0}.TableNm='{3}' and {0}.ClientId='{4}'",
+                        //                      aslinm, item.FieldNm, item.valu1, custbnm, clientid);
+                        wherestr = string.Format("{0}.FieldNm={1} and {0}.FieldValue !={2} and {0}.TableNm={3} and {0}.ClientId={4}",
+                                            aslinm, vfieldnm, vfieldvalue, vcusttbnm, vclientid);
+                        vstr.AppendFormat(",{0}='{1}'", vfieldvalue, item.valu1);
+                        break;
+                    case SmodalSymbol.LessAndEqual:
+                        wherestr = string.Format("{0}.FieldNm='{1}' and {0}.FieldValue<='{2}' and {0}.TableNm='{3}' and {0}.ClientId='{4}'",
+                                              aslinm, item.FieldNm, item.valu1, custbnm, clientid);
+                        wherestr = string.Format("{0}.FieldNm={1} and {0}.FieldValue<={2} and {0}.TableNm={3} and {0}.ClientId={4}",
+                                           aslinm, vfieldnm, vfieldvalue, vcusttbnm, vclientid);
+                        vstr.AppendFormat(",{0}='{1}'", vfieldvalue, item.valu1);
+                        break;
+                    case SmodalSymbol.MoreAndEqual:
+                        //wherestr = string.Format("{0}.FieldNm='{1}' and {0}.FieldValue>='{2}' and {0}.TableNm='{3}' and {0}.ClientId='{4}'",
+                        //                      aslinm, item.FieldNm, item.valu1, custbnm, clientid);
+                        wherestr = string.Format("{0}.FieldNm={1} and {0}.FieldValue >={2} and {0}.TableNm={3} and {0}.ClientId={4}",
+                                           aslinm, vfieldnm, vfieldvalue, vcusttbnm, vclientid);
+                        vstr.AppendFormat(",{0}='{1}'", vfieldvalue, item.valu1);
+                        break;
+                }
+                parms.AppendFormat(",{0} nvarchar(30)",vfieldnm);
+                parms.AppendFormat(",{0} nvarchar(max)",vfieldvalue);
+
+                vstr.AppendFormat(",{0}='{1}'", vfieldnm, item.FieldNm);
+                //vstr.AppendFormat(",{0}='{1}'", vfieldvalue, item.valu1);
+
+                selectstr += wherestr;
+                index++;
+            }
+            x = string.Format("x{0}", xindex);
+            sql.AppendFormat(" EXEC sp_executesql N'select xx.FieldNm,xx.FieldValue, xx.app_logid from {0} xx inner join({1}) {2} on xx.app_logid={2}.app_logid'", udatatbnm, selectstr,x);
+            sql.AppendFormat(",N'{0}'", parms.ToString());
+            sql.AppendFormat(",{0}", vstr);
+            return sql.ToString ();
+        }
     }
 
     public class WhereObject

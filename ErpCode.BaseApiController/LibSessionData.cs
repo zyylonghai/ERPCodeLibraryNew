@@ -33,23 +33,31 @@ namespace ErpCode.BaseApiController
             //UserInfo = new LibClientUserInfo();
         }
         //public LibSessionDataExt DataExt { get; set; }
-        public void AddDataExt<T>(T obj)
+        public void AddDataExt<T>(string key, T obj)
         {
-            string key = typeof(T).Name;
+            //string key = typeof(T).Name;
             if (dataextjson.ContainsKey(key))
             {
                 dataextjson.Remove(key);
             }
             dataextjson.Add(key, JsonConvert.SerializeObject(obj));
         }
-        public T GetDataExt<T>()
+
+        public void RemoveDataExt(string key)
         {
-            string key = typeof(T).Name;
+            if (dataextjson.ContainsKey(key))
+            {
+                dataextjson.Remove(key);
+            }
+        }
+        public T GetDataExt<T>(string key)
+        {
+            //string key = typeof(T).Name;
             if (!dataextjson.ContainsKey(key))
             {
                 return default(T);
             }
-           return  JsonConvert.DeserializeObject<T>(dataextjson[typeof(T).Name]);
+           return  JsonConvert.DeserializeObject<T>(dataextjson[key]);
         }
     }
 }

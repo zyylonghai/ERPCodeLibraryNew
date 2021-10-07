@@ -335,27 +335,31 @@ namespace ErpCodeLibrary.ApiControllers.Users
 
         public override string BindSearchDataGrid(string tbnm, LibSearchKind kind, int limit, int page)
         {
-            List<LibSearchCondition> conds = this.SessionData.GetDataExt<List<LibSearchCondition>>();
+            List<LibSearchCondition> conds = this.SessionData.GetDataExt<List<LibSearchCondition>>("conditions");
             object[] values = { };
             string tb = tbnm;
-            List<object> data = null;
-            if (string.Compare(this.ProgNm, AppConstManage.appUserDefindTable, true) == 0)
+            List<object> data = this.SessionData.GetDataExt<List<object>>("searchdata");
+            if (data == null || data.Count <= 0)
             {
-                conds.Add(new LibSearchCondition { FieldNm = "ClientId", Logic = Smodallogic.And, Symbol = SmodalSymbol.Equal, valu1 = this.UserInfo.ClientId });
-                StringBuilder whereformat = new StringBuilder();
-                SearchConditionHelper.AnalyzeSearchCondition(conds, whereformat, ref values);
-                WhereObject where = new WhereObject { WhereFormat = whereformat.ToString(), Values = values };
-                tb = this.UserInfo.U_TBNm;
-                if (string.IsNullOrEmpty(tb))
-                    tb = this.tDal.GetTableInfoNm(this.UserInfo.ClientId);
-                data = this.tDal.SearchData(tb, where);
+                if (string.Compare(this.ProgNm, AppConstManage.appUserDefindTable, true) == 0)
+                {
+                    conds.Add(new LibSearchCondition { FieldNm = "ClientId", Logic = Smodallogic.And, Symbol = SmodalSymbol.Equal, valu1 = this.UserInfo.ClientId });
+                    StringBuilder whereformat = new StringBuilder();
+                    SearchConditionHelper.AnalyzeSearchCondition(conds, whereformat, ref values);
+                    WhereObject where = new WhereObject { WhereFormat = whereformat.ToString(), Values = values };
+                    tb = this.UserInfo.U_TBNm;
+                    if (string.IsNullOrEmpty(tb))
+                        tb = this.tDal.GetTableInfoNm(this.UserInfo.ClientId);
+                    data = this.tDal.SearchData(tb, where);
+                }
+                else
+                {
+                    data = this.tDal.SearchUData(conds, this.SessionData.ProgInfoData.progInfo.mastTable);
+                }
             }
-            else
-            {
-                data = this.tDal.SearchUData(conds, this.SessionData.ProgInfoData.progInfo.mastTable);
-            }
+            this.SessionData.AddDataExt("searchdata",data);
             //SearchDataExt(string.IsNullOrEmpty(tbnm) ? this.SessionData.ProgInfoData.progInfo.mastTable : tbnm, kind, ref data);
-            var result = new { code = 0, msg = "success", count = data.Count, data = data };
+            var result = new { code = 0, msg = "success", count = data.Count, data = data.Skip(limit * (page - 1)).Take(limit).ToList() };
             return JsonConvert.SerializeObject(result);
         }
 
@@ -538,6 +542,18 @@ namespace ErpCodeLibrary.ApiControllers.Users
             }
         }
         #endregion
+
+        #region 数据日志查询
+        protected override string Getapplogid(LibClientDataInfo d)
+        {
+            if (string.Compare(this.ProgNm, AppConstManage.appUserDefindTable, true) == 0)
+            {
+                return base.Getapplogid(d);
+            }
+            Dictionary<string, object> dic = d.Datas as Dictionary<string, object>;
+            return dic[AppConstManage.applogid].ToString();
+        }
+        #endregion 
 
         #region 私有函数
         private List<U_TableFieldInfo> GetU_TableFieldInfos(string tbnm)

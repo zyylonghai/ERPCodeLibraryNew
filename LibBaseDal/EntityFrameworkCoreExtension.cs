@@ -27,12 +27,22 @@ namespace LibraryBaseDal
 
         public static DataTable SqlQuery(this DatabaseFacade facade, string sql)
         {
-            var command = CreateCommand(facade, sql, out DbConnection conn);
-            var reader = command.ExecuteReader();
             var dt = new DataTable();
-            dt.Load(reader);
-            reader.Close();
-            conn.Close();
+            var command = CreateCommand(facade, sql, out DbConnection conn);
+            try
+            {
+                var reader = command.ExecuteReader();
+                dt.Load(reader);
+                reader.Close();
+            }
+            catch(Exception ex)
+            {
+
+            }
+            finally
+            {
+                conn.Close();
+            }
             return dt;
         }
 

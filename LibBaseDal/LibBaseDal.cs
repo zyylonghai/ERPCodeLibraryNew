@@ -212,6 +212,7 @@ namespace LibraryBaseDal
                             sys.LibModelStatus = LibModelStatus.Edit;
                         sys.LastModifyDT = DateTime.Now;
                         sys.LastModifier = this.UserInfo.UserNm;
+                        sys.ClientId = string.IsNullOrEmpty(sys.ClientId) ? this.UserInfo.ClientId : sys.ClientId;
                         //sys.LibModelStatus = LibModelStatus.Edit;
                         MastHandle(sys);
                     }
@@ -225,7 +226,7 @@ namespace LibraryBaseDal
             }
             SaveChange();
         }
-        protected async Task DoWritDataLog(List<object> datas)
+        protected async Task DoWritDataLog(List<object> datas,bool isudata=false)
         {
             await Task.Run(() =>
             {
@@ -235,31 +236,28 @@ namespace LibraryBaseDal
                     LibModelCore obj = null;
                     foreach (object item in datas)
                     {
-                        obj = (LibModelCore)item;
-                        if (obj.LibModelStatus == LibModelStatus.Add)
+                        if (isudata)
                         {
-                            sqlbuilder.Append(DoGetLogSqlStr((LibModelCore)item, 1, log));
+                            LibClientDataInfo d = item as LibClientDataInfo;
+                            sqlbuilder.Append(DoGetLogSqlStrForUdata(d.Datas, d.LogAction, d.TableNm, log));
                         }
-                        else if (obj.LibModelStatus == LibModelStatus.Edit ||obj .LibModelStatus==LibModelStatus.KeyUpdate ||(obj .LibModelStatus ==LibModelStatus.Delete && obj .IsDeleted))
+                        else
                         {
-                            sqlbuilder.Append(DoGetLogSqlStr((LibModelCore)item, 2, log));
+                            obj = (LibModelCore)item;
+                            if (obj.LibModelStatus == LibModelStatus.Add)
+                            {
+                                sqlbuilder.Append(DoGetLogSqlStr((LibModelCore)item, 1, log));
+                            }
+                            else if (obj.LibModelStatus == LibModelStatus.Edit || obj.LibModelStatus == LibModelStatus.KeyUpdate || (obj.LibModelStatus == LibModelStatus.Delete && obj.IsDeleted))
+                            {
+                                sqlbuilder.Append(DoGetLogSqlStr((LibModelCore)item, 2, log));
+                            }
                         }
                     }
                     if (!string.IsNullOrEmpty(sqlbuilder.ToString()))
                         log.Database.ExecuteSql(sqlbuilder.ToString());
                 }
             });
-            //using (DataLogDBContext log = new DataLogDBContext())
-            //{
-            //    foreach (object item in datas)
-            //    {
-            //        if (((LibModelCore)item).LibModelStatus == LibModelStatus.Add)
-            //        {
-            //            DoGetLogSqlStr((LibModelCore)item, log);
-            //        }
-            //    }
-
-            //}
         }
         private void CallBackMethod(IAsyncResult ar)
         {
@@ -289,6 +287,42 @@ namespace LibraryBaseDal
                                           (Int64)parameters[2].Value, action, this.UserInfo.UserNm, this.UserInfo.IP, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss:fff"), JsonConvert.SerializeObject(model));
                     //}
                 }
+            }
+            return sql.ToString();
+        }
+
+        /// <summary>
+        /// 只用于自定义表数据的日志插入语法。
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="action"></param>
+        /// <param name="tbnm"></param>
+        /// <param name="logdb"></param>
+        /// <returns></returns>
+        private string DoGetLogSqlStrForUdata(object model,int action,string tbnm, DataLogDBContext logdb)
+        {
+            Dictionary<string, object> data = model as Dictionary<string, object>;
+            LibDbParameter[] parameters = new LibDbParameter[4];
+            parameters[0] = new LibDbParameter { ParameterNm = "@logid", DbType = DbType.String, Value = data[AppConstManage.applogid] };
+            parameters[1] = new LibDbParameter { ParameterNm = "@tablenm", DbType = DbType.String, Value = tbnm };
+            parameters[2] = new LibDbParameter { ParameterNm = "@ID", DbType = DbType.Int64, Direction = ParameterDirection.Output, Value = 0 };
+            parameters[3] = new LibDbParameter { ParameterNm = "@logtbnm", DbType = DbType.String, Size = 35, Direction = ParameterDirection.Output, Value = string.Empty };
+            logdb.Database.ExeStoredProcedure(action == 1 ? "p_addlogM" : "p_GetlogM", parameters);
+            StringBuilder sql = new StringBuilder();
+            //PropertyInfo[] ps = t.GetProperties();
+            if (!string.IsNullOrEmpty(parameters[3].Value.ToString()) && (Int64)parameters[2].Value != 0)
+            {
+                //if (ps.Length > 0)
+                //{
+                    //foreach (PropertyInfo p in ps)
+                    //{
+                    //if (p.Name == AppConstManage.applogid) continue;
+                    sql.AppendFormat("  EXEC sp_executesql N'insert into {0}(ID,Action,UserId,IP,DT,Datajson) values(@ID,@Action,@UserId,@IP,@DT,@Datajson) '", parameters[3].Value.ToString());
+                    sql.Append(" ,N'@ID bigint,@Action char(1),@UserId nvarchar(30),@IP nvarchar(15),@DT datetime,@Datajson ntext',");
+                    sql.AppendFormat("  @ID={0},@Action='{1}',@UserId='{2}',@IP='{3}',@DT='{4}',@Datajson='{5}' ",
+                                          (Int64)parameters[2].Value, action, this.UserInfo.UserNm, this.UserInfo.IP, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss:fff"), JsonConvert.SerializeObject(model));
+                    //}
+                //}
             }
             return sql.ToString();
         }
