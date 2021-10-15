@@ -195,10 +195,10 @@
                     if (o.ID == selected[0].id)
                         currctr = o;
                 });
-                if (currctr.TableNm != data.value) {
+              /*  if (currctr.TableNm != data.value) {*/
                     getFields(data.value);
                     form.render();
-                }
+              /*  }*/
                 //form.render('select');
             });
             form.on('select(Field)', function (data) {
@@ -322,12 +322,21 @@
                 success: function (data) {
                     RenderTplHtml('fldlistTpl', 'fieldlist', data, false);
                     //fields.length = 0;
+                
                     let removes = [];
                     fields.forEach(function (o) {
                         if (o.ID == selected[0].id) {
                             removes.push(o);
                         }
                     });
+                    //removes.forEach(function (o) {
+                    //    $.each(data, function (i, d) {
+                    //        if (d.fieldNm == o.Field) {
+                    //            data.splice(i, 1);
+                    //            return false;
+                    //        }
+                    //    });
+                    //});
                     removes.forEach(function (o) {
                         $.each(fields, function (i, f) {
                             if (f.ID == selected[0].id && f.Field == o.Field) {
@@ -362,12 +371,6 @@
                         fields.push(fld);
                         cout++;
                     });
-                    //var gettpl = document.getElementById('fldTpl').innerHTML;
-
-                    //laytpl(gettpl).render(data, function (html) {
-                    //    document.getElementById('fieldInfo').innerHTML = html;
-                    //});
-                    //form.render('select');
                 },
                 error: function (msg) {
                     alert(msg.responseText);

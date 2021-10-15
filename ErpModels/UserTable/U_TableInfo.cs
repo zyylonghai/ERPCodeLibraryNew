@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using ErpCode.Com.Enums;
+using Library.Core.LibAttribute;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -17,9 +19,12 @@ namespace ErpModels.UserTable
 
         public string TableDesc { get; set; }
 
+        [LibFromSource("U_DataSourceInfo", "DataSourceNm", "DataSourceDesc")]
         public string DataSourceNm { get; set; }
 
         public string DataTBNm { get; set; }
+
+        public LibTableKind TableKind { get; set; }
 
         public override void OnModelBuilder(ModelBuilder builder)
         {

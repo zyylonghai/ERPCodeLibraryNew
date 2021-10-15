@@ -25,9 +25,28 @@ namespace ErpModels.UserTable
 
         public bool IsPrimaryKey { get; set; }
 
-        public int DataLength { get; set; }
+        /// <summary>是否虚拟字段</summary>
+        public bool IsVirtual { get; set; }
 
+        public int DataLength { get; set; }
+        /// <summary>小数点后位数</summary>
         public int PointLength { get; set; }
+
+        /// <summary>字段最大长度</summary>
+        public int MaxLength { get; set; }
+
+        /// <summary>
+        /// 来源数据源
+        /// </summary>
+        public string FromDataSource { get; set; }
+        /// <summary>
+        /// 来源字段
+        /// </summary>
+        public string FromFieldNm { get; set; }
+        /// <summary>
+        /// 来源描述字段
+        /// </summary>
+        public string FromFieldDescNm { get; set; }
 
         public override void OnModelBuilder(ModelBuilder builder)
         {

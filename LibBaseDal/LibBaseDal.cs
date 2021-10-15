@@ -147,6 +147,18 @@ namespace LibraryBaseDal
             }
         }
 
+        public void DeleteDetailsHandle<T>(List<T> details)
+            where T : LibModelCore
+        {
+            if (details != null && details.Count > 0)
+            {
+                foreach (T item in details)
+                {
+                    DeleteHandle(item);
+                }
+            }
+        }
+
         public void SaveChange()
         {
             _dbcontext.SaveChanges();
@@ -220,6 +232,7 @@ namespace LibraryBaseDal
                     {
                         sys = (LibModelCore)o;
                         sys.LibModelStatus = LibModelStatus.Delete;
+                        //DeleteHandle(sys);
                         MastHandle(sys);
                     }
                 }
@@ -489,17 +502,20 @@ namespace LibraryBaseDal
 
         public override List<LanguageField> AppGetFieldDesc(int languageid, string prognm, string tbnm, string fieldnm)
         {
+            string cltid = string.Empty;
             using (AppDBContext appDB = new AppDBContext())
             {
+                if (this.UserInfo != null)
+                    cltid = this.UserInfo.ClientId;
                 if (string.IsNullOrEmpty(fieldnm) && !string.IsNullOrEmpty(tbnm))
                 {
-                    return appDB.LanguageField.Where(i => i.LanguageId == (LibLanguage)languageid && i.ProgNm == prognm && i.TableNm == tbnm).ToList();
+                    return appDB.LanguageField.Where(i => i.LanguageId == (LibLanguage)languageid && i.ProgNm == prognm && i.TableNm == tbnm && (i.ClientId == cltid || i.ClientId ==AppConstManage.appDeveloper)).ToList();
                 }
                 else if (string.IsNullOrEmpty(fieldnm) && string.IsNullOrEmpty(tbnm))
                 {
-                    return appDB.LanguageField.Where(i => i.LanguageId == (LibLanguage)languageid && i.ProgNm == prognm).ToList();
+                    return appDB.LanguageField.Where(i => i.LanguageId == (LibLanguage)languageid && i.ProgNm == prognm && (i.ClientId == cltid || i.ClientId == AppConstManage.appDeveloper)).ToList();
                 }
-                return appDB.LanguageField.Where(i => i.LanguageId == (LibLanguage)languageid && i.ProgNm == prognm && i.TableNm == tbnm && i.FieldNm == fieldnm).ToList();
+                return appDB.LanguageField.Where(i => i.LanguageId == (LibLanguage)languageid && i.ProgNm == prognm && i.TableNm == tbnm && i.FieldNm == fieldnm && (i.ClientId == cltid || i.ClientId == AppConstManage.appDeveloper)).ToList();
             }
         }
 

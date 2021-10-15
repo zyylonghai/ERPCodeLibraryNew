@@ -58,6 +58,10 @@ namespace ErpCode.Com
             {
                 clientDataInfo.Datas = JsonConvert.DeserializeObject(((JsonElement)clientDataInfo.Datas).ToString());
             }
+            if (clientDataInfo.Datas.GetType().Equals(targtype))
+            {
+                return clientDataInfo.Datas;
+            }
             if (!clientDataInfo.Datas.GetType().Equals(typeof(JObject)))
             {
                 throw new LibExceptionBase("参数clientDataInfo.Datas 类型必须是JObject或JsonElement");

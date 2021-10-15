@@ -21,4 +21,16 @@ namespace ErpCode.Com.Enums
         /// </summary>
         Search = 6
     }
+    /// <summary>表种类 </summary>
+    public enum LibTableKind
+    {
+        /// <summary>
+        /// 虚拟表
+        /// </summary>
+        Virtual=0,
+        /// <summary>
+        /// 实体表
+        /// </summary>
+        Entity=1
+    }
 }

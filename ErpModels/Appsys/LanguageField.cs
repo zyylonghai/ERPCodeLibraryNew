@@ -22,7 +22,7 @@ namespace ErpModels.Appsys
         public override void OnModelBuilder(ModelBuilder builder)
         {
             base.OnModelBuilder(builder);
-            builder.Entity<LanguageField>().HasKey(i => new { i.LanguageId ,i.ProgNm ,i.FieldNm ,i.TableNm });
+            builder.Entity<LanguageField>().HasKey(i => new { i.LanguageId ,i.ProgNm ,i.FieldNm ,i.TableNm,i.ClientId });
         }
     }
 }

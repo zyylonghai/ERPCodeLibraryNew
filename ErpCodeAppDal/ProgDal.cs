@@ -10,6 +10,7 @@ using ErpModels.Appsys;
 using Microsoft.EntityFrameworkCore;
 using ErpCode.Com.Enums;
 using ViewModels.AuthorViewModel;
+using ErpCode.Com;
 
 namespace ErpCode.AppDal
 {
@@ -154,6 +155,25 @@ namespace ErpCode.AppDal
 
             result.progFieldInfos = progfields;
             return result;
+        }
+
+        protected override void BeforeUpdate()
+        {
+            base.BeforeUpdate();
+            //foreach (LibClientDatas datas in ClientDatas)
+            //{
+            if (string.Compare(this.ProgNm,"ProgInfo",true )==0)
+            {
+                var o = ClientDatas.FirstOrDefault(i => i.TableNm == "ProgInfo");
+                if (o.ClientDataInfos.Count > 0 && o.ClientDataInfos[0].clientDataStatus ==LibClientDataStatus.Edit)
+                {
+                    ProgInfo prog = LibAppUtils.JobjectToType<ProgInfo>(o.ClientDataInfos[0]);
+                   var progfields= this.dBContext.ProgFieldInfo.Where(i => i.ProgNm == prog .progNm).ToList();
+                    this.DeleteDetailsHandle(progfields);
+                }
+
+            }
+            //}
         }
     }
 }

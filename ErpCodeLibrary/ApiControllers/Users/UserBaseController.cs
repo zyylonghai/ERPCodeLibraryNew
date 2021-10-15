@@ -282,6 +282,7 @@ namespace ErpCodeLibrary.ApiControllers.Users
                 if (data == null)
                     this.ClientDatas.Add(item);
             }
+            this.tDal.U_TableFields = this.SessionData.u_TableFieldInfos;
             this.tDal.Update(this.ClientDatas);
             AfterUpdate();
             //msg000000001 保存成功
@@ -304,13 +305,14 @@ namespace ErpCodeLibrary.ApiControllers.Users
                 return base.GetSearchfieldandsymbol(tbnm,flag);
             }
             List<LibFieldInfo> libFields = new List<LibFieldInfo>();
-            string mtb = tbnm;
+            string mtb = flag == 1 ? this.SessionData.ProgInfoData.progInfo.mastTable : tbnm;
             Dictionary<string, List<LibEnumkeyvalue>> optionfields = new Dictionary<string, List<LibEnumkeyvalue>>();
-            if (flag == 1) {
-                var fields = this.SessionData.u_TableFieldInfos.Where(i => i.TableNm == this.SessionData.ProgInfoData.progInfo.mastTable);
+            //if (flag == 1)
+            //{
+                var fields = this.SessionData.u_TableFieldInfos.Where(i => i.TableNm == mtb);
                 if (fields == null || fields.Count() <= 0)
                 {
-                    fields = this.tDal.GetTableFieldsInfo(this.SessionData.ProgInfoData.progInfo.mastTable);
+                    fields = this.tDal.GetTableFieldsInfo(mtb);
                 }
                 if (fields != null && fields.Count() > 0)
                 {
@@ -322,7 +324,11 @@ namespace ErpCodeLibrary.ApiControllers.Users
                         libFields.Add(fieldInfo);
                     }
                 }
-            }
+            //}
+            //else if (flag == 2)//来源主数据搜索
+            //{
+                
+            //}
             //SetSearchFieldsExt(tbnm, (LibSearchKind)flag, ref libFields);
             List<LibEnumkeyvalue> symbols = LibAppUtils.GetenumFields<SmodalSymbol>();
             symbols.ForEach(i => { i.value = AppGetFieldDesc(string.Empty, "SmodalSymbol", i.value); });
@@ -344,17 +350,18 @@ namespace ErpCodeLibrary.ApiControllers.Users
                 if (string.Compare(this.ProgNm, AppConstManage.appUserDefindTable, true) == 0)
                 {
                     conds.Add(new LibSearchCondition { FieldNm = "ClientId", Logic = Smodallogic.And, Symbol = SmodalSymbol.Equal, valu1 = this.UserInfo.ClientId });
+                    conds.Add(new LibSearchCondition { FieldNm = "IsDeleted", Logic = Smodallogic.And, Symbol = SmodalSymbol.Equal, valu1 = "false" });
                     StringBuilder whereformat = new StringBuilder();
                     SearchConditionHelper.AnalyzeSearchCondition(conds, whereformat, ref values);
                     WhereObject where = new WhereObject { WhereFormat = whereformat.ToString(), Values = values };
-                    tb = this.UserInfo.U_TBNm;
+                    tb = kind == LibSearchKind.ProgSearch ? this.UserInfo.U_TBNm : tbnm;
                     if (string.IsNullOrEmpty(tb))
                         tb = this.tDal.GetTableInfoNm(this.UserInfo.ClientId);
                     data = this.tDal.SearchData(tb, where);
                 }
                 else
                 {
-                    data = this.tDal.SearchUData(conds, this.SessionData.ProgInfoData.progInfo.mastTable);
+                    data = this.tDal.SearchUData(conds, kind == LibSearchKind.ProgSearch ? this.SessionData.ProgInfoData.progInfo.mastTable : tbnm);
                 }
             }
             this.SessionData.AddDataExt("searchdata",data);
@@ -400,6 +407,41 @@ namespace ErpCodeLibrary.ApiControllers.Users
             return ResponseMsg;
         }
         #endregion
+
+        #region 来源主数据搜索相关
+        public override ResponseMsg GetSearchFromSrcNm(string pgnm, string controlid, string field)
+        {
+            if (string.Compare(this.ProgNm, AppConstManage.appUserDefindTable, true) == 0)
+            {
+                if (string.Compare(field, "DataSourceNm", true) == 0 && string.Compare(controlid, "colla1", true) == 0)
+                {
+                    return base.GetSearchFromSrcNm(ProgNm, controlid, field);
+                }
+                else if (string.Compare(field, "FromDataSource", true) == 0 && string.Compare(controlid, "grid2", true) == 0)
+                {
+                    string tb = this.tDal.GetTableInfoNm(this.UserInfo.ClientId);
+                    ResponseMsg.Data = new { tbnm = tb, fromfield = "TableNm", desc = "TableDesc" };
+                }
+            }
+            else
+            {
+                List<ProgControlInfo> ctrls = this.Getsessiondata(pgnm.ToUpper()).ProgInfoData.progControlInfos;
+                if (ctrls != null)
+                {
+                    var exist = ctrls.FirstOrDefault(i => i.ID == controlid);
+                    if (exist != null)
+                    {
+                        var u_fobj = this.SessionData.u_TableFieldInfos.FirstOrDefault(i => i.TableNm == exist.TableNm && i.FieldNm == field);
+                        if (u_fobj != null)
+                        {
+                            ResponseMsg.Data = new { tbnm = u_fobj.FromDataSource, fromfield = u_fobj.FromFieldNm, desc = u_fobj.FromFieldDescNm };
+                        }
+                    }
+                }
+            }
+            return ResponseMsg;
+        }
+        #endregion 
 
         #region 表格相关
         public override ResponseMsg GetTableAction(LibClientDatas clientDatas)

@@ -60,6 +60,8 @@ namespace LibraryBaseDal
                     return typeof(U_TableInfo);
                 case "U_TableFieldInfo":
                     return typeof(U_TableFieldInfo);
+                case "U_DataSourceInfo":
+                    return typeof(U_DataSourceInfo);
                 default:
                     if (nm.StartsWith("U_TableInfo", StringComparison.OrdinalIgnoreCase))
                     {

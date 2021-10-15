@@ -517,6 +517,7 @@ namespace ErpCode.BaseApiController
             List<LibSearchCondition> conds = this.SessionData.GetDataExt<List<LibSearchCondition>>("conditions");
             object[] values = { };
             conds.Add(new LibSearchCondition { FieldNm = "ClientId", Logic = Smodallogic.And, Symbol = SmodalSymbol.Equal, valu1 = this.UserInfo.ClientId });
+            conds.Add(new LibSearchCondition { FieldNm = "IsDeleted", Logic = Smodallogic.And, Symbol = SmodalSymbol.Equal, valu1 = "false" });
             StringBuilder whereformat = new StringBuilder();
             SearchConditionHelper.AnalyzeSearchCondition(conds, whereformat, ref values);
             WhereObject where = new WhereObject { WhereFormat = whereformat.ToString(), Values = values };
@@ -576,7 +577,7 @@ namespace ErpCode.BaseApiController
         #endregion
 
         #region 来源主数据搜索相关
-        public ResponseMsg GetSearchFromSrcNm(string pgnm, string controlid,string field)
+        public virtual ResponseMsg GetSearchFromSrcNm(string pgnm, string controlid,string field)
         {
             //List<ProgControlInfo> ctrls = this.SessionData.ProgInfoData.progControlInfos;
             List<ProgControlInfo> ctrls = this.Getsessiondata(pgnm.ToUpper ()).ProgInfoData.progControlInfos;

@@ -17,6 +17,13 @@ namespace ErpCode.UserDal
     public class UserDal : LibDataBaseDal<UserTableDBContext>
     {
         private List<object> updateData = new List<object>();
+
+        public List<U_TableFieldInfo> U_TableFields { get; set; }
+        public UserDal()
+            :base ()
+        {
+            U_TableFields = new List<U_TableFieldInfo>();
+        }
         public List<U_TableFieldInfo> GetTableFieldsInfo(string tbnm)
         {
             LibDbParameter[] parameters = new LibDbParameter[2];
@@ -30,16 +37,19 @@ namespace ErpCode.UserDal
         /// <param name="utablenm"></param>
         /// <param name="tablenm"></param>
         /// <returns></returns>
-        public string GetUDataNm(string clientid, string utablenm, string tablenm)
+        public U_TableInfo GetUDataNm(string clientid, string utablenm, string tablenm)
         {
             LibDbParameter[] parameters = new LibDbParameter[3];
             parameters[0] = new LibDbParameter { ParameterNm = "@clientid", DbType = DbType.String, Value = this.UserInfo.ClientId };
             parameters[1] = new LibDbParameter { ParameterNm = "@utableNm", DbType = DbType.String, Value = utablenm };
             parameters[2] = new LibDbParameter { ParameterNm = "@tableNm", DbType = DbType.String, Value = tablenm };
-            var tbs = this.dBContext.Database.ExeStoredProcedureToData("p_GetUData", parameters);
-            return tbs.Rows[0]["DataTBNm"].ToString();
+            var tbs = this.dBContext.Database.ExeStoredProcedureToData("p_GetUData", parameters).ToList<U_TableInfo>().FirstOrDefault();
+            return tbs;
         }
 
+        /// <summary>获取租户自定义表信息的实际存储的表名（即对应的U_TableInfo）</summary>
+        /// <param name="clientid"></param>
+        /// <returns></returns>
         public string GetTableInfoNm(string clientid)
         {
             var o = this.GetStorageInfo(clientid);
@@ -79,11 +89,14 @@ namespace ErpCode.UserDal
                 var d = ClientDatas.FirstOrDefault(i => i.TableNm == "U_TableInfo");
                 if (d != null)
                 {
+                    string udatatbnm = string.Empty;
+                    if (d.ClientDataInfos.Count > 0 && d.ClientDataInfos[0].clientDataStatus == LibClientDataStatus.Add)
+                        udatatbnm = GetUdataTableNm("U_Data");
                     //d.TableNm = o.StorageTableNm;
                     //this.dBContext.Database.ExecuteSql
                     foreach (var clidata in d.ClientDataInfos)
                     {
-                        sql.Append(DoGetTBinfosql(clidata, this.UserInfo.U_TBNm));
+                        sql.Append(DoGetTBinfosql(clidata, this.UserInfo.U_TBNm,udatatbnm));
                     }
                 }
                 d = ClientDatas.FirstOrDefault(i => i.TableNm == "U_TableFieldInfo");
@@ -106,7 +119,9 @@ namespace ErpCode.UserDal
             {
                 foreach (var item in ClientDatas)
                 {
-                    var storagetbnm = this.GetUDataNm(this.UserInfo.ClientId, this.UserInfo.U_TBNm, item.TableNm);
+                    var udataobj= this.GetUDataNm(this.UserInfo.ClientId, this.UserInfo.U_TBNm, item.TableNm);
+                    var storagetbnm = udataobj.DataTBNm;
+                    if (udataobj.TableKind == Com.Enums.LibTableKind.Virtual) continue;
                     foreach (var d in item.ClientDataInfos)
                     {
                         d.TableNm = item.TableNm;
@@ -147,7 +162,8 @@ namespace ErpCode.UserDal
             {
                 string sql = string.Empty;
                 int index = 0;
-                tb = this.GetUDataNm(this.UserInfo.ClientId, this.UserInfo.U_TBNm, tbnm);
+                var udataobj= this.GetUDataNm(this.UserInfo.ClientId, this.UserInfo.U_TBNm, tbnm);
+                tb = udataobj.DataTBNm;
                 List<LibSearchCondition> conds = new List<LibSearchCondition>();
                 foreach (var item in mstKeys)
                 {
@@ -179,7 +195,8 @@ namespace ErpCode.UserDal
         {
             StringBuilder sql = new StringBuilder();
             //List<object> result = new List<object>();
-            string udatatbnm = this.GetUDataNm(this.UserInfo.ClientId, this.UserInfo.U_TBNm, custbnm);
+            var udataobj = this.GetUDataNm(this.UserInfo.ClientId, this.UserInfo.U_TBNm, custbnm);
+            string udatatbnm = udataobj.DataTBNm;
             if (conds == null || conds.Count == 0)
             {
                 sql.AppendFormat(" EXEC sp_executesql N'select FieldNm,FieldValue,app_logid from {0} where TableNm=@TableNm and ClientId=@ClientId  '", udatatbnm);
@@ -206,21 +223,23 @@ namespace ErpCode.UserDal
             //return result;
         }
 
-        private string DoGetTBinfosql(LibClientDataInfo model, string tableNm)
+        #region
+        private string DoGetTBinfosql(LibClientDataInfo model, string tableNm,string udatanm)
         {
             StringBuilder sql = new StringBuilder();
             U_TableInfo o = model.Datas as U_TableInfo;
+            o.DataTBNm = udatanm;
             this.updateData.Add(o);
             if (model.clientDataStatus == LibClientDataStatus.Add)
             {
                 o.LibModelStatus = LibModelStatus.Add;
                 o.CreateDT = DateTime.Now;
                 o.Creater = this.UserInfo.UserNm;
-                sql.AppendFormat(" EXEC sp_executesql N'insert into {0}(TableNm,ClientId,TableDesc,DataSourceNm,DataTBNm,IsDeleted,CreateDT,Creater,app_logid) ", tableNm);
-                sql.Append(" values(@TableNm,@ClientId,@TableDesc,@DataSourceNm,@DataTBNm,@IsDeleted,@CreateDT,@Creater,@app_logid)'");
-                sql.Append(",N'@TableNm nvarchar(30),@ClientId nvarchar(15),@TableDesc nvarchar(50),@DataSourceNm nvarchar(30),@DataTBNm nvarchar(30),@IsDeleted bit,@CreateDT datetime,@Creater nvarchar(30),@app_logid nvarchar(50)',");
-                sql.AppendFormat("  @TableNm='{0}',@ClientId='{1}',@TableDesc='{2}',@DataSourceNm='{3}',@DataTBNm='{4}',@IsDeleted='{5}', @CreateDT='{6}', @Creater='{7}', @app_logid='{8}'",
-                                              o.TableNm, this.UserInfo.ClientId, o.TableDesc, o.DataSourceNm, o.DataTBNm, o.IsDeleted, o.CreateDT.Value.ToString("yyyy-MM-dd HH:mm:ss:fff"), o.Creater, o.app_logid);
+                sql.AppendFormat(" EXEC sp_executesql N'insert into {0}(TableNm,ClientId,TableDesc,DataSourceNm,DataTBNm,TableKind,IsDeleted,CreateDT,Creater,app_logid) ", tableNm);
+                sql.Append(" values(@TableNm,@ClientId,@TableDesc,@DataSourceNm,@DataTBNm,@TableKind, @IsDeleted,@CreateDT,@Creater,@app_logid)'");
+                sql.Append(",N'@TableNm nvarchar(30),@ClientId nvarchar(15),@TableDesc nvarchar(50),@DataSourceNm nvarchar(30),@DataTBNm nvarchar(30),@TableKind int, @IsDeleted bit,@CreateDT datetime,@Creater nvarchar(30),@app_logid nvarchar(50)',");
+                sql.AppendFormat("  @TableNm='{0}',@ClientId='{1}',@TableDesc='{2}',@DataSourceNm='{3}',@DataTBNm='{4}',@IsDeleted='{5}', @CreateDT='{6}', @Creater='{7}', @app_logid='{8}',@TableKind={9}",
+                                              o.TableNm, this.UserInfo.ClientId, o.TableDesc, o.DataSourceNm, o.DataTBNm, o.IsDeleted, o.CreateDT.Value.ToString("yyyy-MM-dd HH:mm:ss:fff"), o.Creater, o.app_logid,(int)o.TableKind);
             }
             else if (model.clientDataStatus == LibClientDataStatus.Edit)
             {
@@ -228,12 +247,12 @@ namespace ErpCode.UserDal
                 o.LastModifyDT = DateTime.Now;
                 o.LastModifier = this.UserInfo.UserNm;
                 U_TableInfo old = model.OldDatas as U_TableInfo;
-                sql.AppendFormat(" EXEC sp_executesql N'update {0} set TableNm=@TableNm,ClientId=@ClientId,TableDesc=@TableDesc,DataSourceNm=@DataSourceNm,LastModifyDT=@LastModifyDT,LastModifier=@LastModifier ", tableNm);
+                sql.AppendFormat(" EXEC sp_executesql N'update {0} set TableNm=@TableNm,ClientId=@ClientId,TableDesc=@TableDesc,DataSourceNm=@DataSourceNm,TableKind=@TableKind,LastModifyDT=@LastModifyDT,LastModifier=@LastModifier ", tableNm);
                 sql.Append(" where TableNm=@oldTableNm and ClientId=@ClientId '");
                 //sql.Append(" values(@TableNm,@ClientId,@TableDesc,@DataSourceNm,@DataTBNm,@IsDeleted,@CreateDT,@Creater,@app_logid)'");
-                sql.Append(",N'@TableNm nvarchar(30),@oldTableNm nvarchar(30), @ClientId nvarchar(15),@TableDesc nvarchar(50),@DataSourceNm nvarchar(30),@LastModifyDT datetime,@LastModifier nvarchar(30)',");
-                sql.AppendFormat("  @TableNm='{0}',@ClientId='{1}',@TableDesc='{2}',@DataSourceNm='{3}',@LastModifyDT='{4}',@LastModifier='{5}',@oldTableNm='{6}'",
-                                              o.TableNm, this.UserInfo.ClientId, o.TableDesc, o.DataSourceNm, o.LastModifyDT.Value.ToString("yyyy-MM-dd HH:mm:ss:fff"), o.LastModifier, (old == null ? o.TableNm : old.TableNm));
+                sql.Append(",N'@TableNm nvarchar(30),@oldTableNm nvarchar(30), @ClientId nvarchar(15),@TableDesc nvarchar(50),@DataSourceNm nvarchar(30),@TableKind int,@LastModifyDT datetime,@LastModifier nvarchar(30)',");
+                sql.AppendFormat("  @TableNm='{0}',@ClientId='{1}',@TableDesc='{2}',@DataSourceNm='{3}',@LastModifyDT='{4}',@LastModifier='{5}',@oldTableNm='{6}',@TableKind={7}",
+                                              o.TableNm, this.UserInfo.ClientId, o.TableDesc, o.DataSourceNm, o.LastModifyDT.Value.ToString("yyyy-MM-dd HH:mm:ss:fff"), o.LastModifier, (old == null ? o.TableNm : old.TableNm),(int)o.TableKind);
             }
             return sql.ToString();
         }
@@ -246,22 +265,22 @@ namespace ErpCode.UserDal
             if (model.clientDataStatus == LibClientDataStatus.Add)
             {
                 o.LibModelStatus = LibModelStatus.Add;
-                sql.AppendFormat(" EXEC sp_executesql N'insert into {0}(TableNm,ClientId,FieldNm,FieldDesc,DataType,IsPrimaryKey,DataLength,PointLength,IsDeleted, CreateDT,Creater,app_logid)", tableNm);
-                sql.Append(" values(@TableNm,@ClientId,@FieldNm,@FieldDesc,@DataType,@IsPrimaryKey,@DataLength,@PointLength, @IsDeleted,@CreateDT,@Creater,@app_logid)'");
-                sql.Append(",N'@TableNm nvarchar(30),@ClientId nvarchar(15),@FieldNm nvarchar(30),@FieldDesc nvarchar(50),@DataType int,@IsPrimaryKey bit,@DataLength int,@PointLength int, @IsDeleted bit,@CreateDT datetime,@Creater nvarchar(30),@app_logid nvarchar(50)',");
-                sql.AppendFormat("  @TableNm='{0}',@ClientId='{1}',@FieldNm='{2}',@FieldDesc='{3}',@DataType={4},@IsPrimaryKey='{5}', @DataLength={6},@PointLength={7}, @IsDeleted='{8}', @CreateDT='{9}', @Creater='{10}', @app_logid='{11}'",
-                                              o.TableNm, this.UserInfo.ClientId, o.FieldNm, o.FieldDesc, (int)o.DataType, o.IsPrimaryKey, o.DataLength, o.PointLength, o.IsDeleted, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss:fff"), this.UserInfo.UserNm, o.app_logid);
+                sql.AppendFormat(" EXEC sp_executesql N'insert into {0}(TableNm,ClientId,FieldNm,FieldDesc,DataType,IsPrimaryKey,DataLength,PointLength,IsDeleted, CreateDT,Creater,app_logid,MaxLength,FromDataSource,FromFieldNm,FromFieldDescNm,IsVirtual)", tableNm);
+                sql.Append(" values(@TableNm,@ClientId,@FieldNm,@FieldDesc,@DataType,@IsPrimaryKey,@DataLength,@PointLength, @IsDeleted,@CreateDT,@Creater,@app_logid,@MaxLength,@FromDataSource,@FromFieldNm,@FromFieldDescNm,@IsVirtual)'");
+                sql.Append(",N'@TableNm nvarchar(30),@ClientId nvarchar(15),@FieldNm nvarchar(30),@FieldDesc nvarchar(50),@DataType int,@IsPrimaryKey bit,@DataLength int,@PointLength int, @IsDeleted bit,@CreateDT datetime,@Creater nvarchar(30),@app_logid nvarchar(50),@MaxLength int,@FromDataSource nvarchar(30),@FromFieldNm nvarchar(30),@FromFieldDescNm nvarchar(30),@IsVirtual bit ',");
+                sql.AppendFormat("  @TableNm='{0}',@ClientId='{1}',@FieldNm='{2}',@FieldDesc='{3}',@DataType={4},@IsPrimaryKey='{5}', @DataLength={6},@PointLength={7}, @IsDeleted='{8}', @CreateDT='{9}', @Creater='{10}', @app_logid='{11}',@MaxLength={12},@FromDataSource='{13}',@FromFieldNm='{14}',@FromFieldDescNm='{15}',@IsVirtual='{16}'",
+                                              o.TableNm, this.UserInfo.ClientId, o.FieldNm, o.FieldDesc, (int)o.DataType, o.IsPrimaryKey, o.DataLength, o.PointLength, o.IsDeleted, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss:fff"), this.UserInfo.UserNm, o.app_logid,o.MaxLength ,o.FromDataSource,o.FromFieldNm,o.FromFieldDescNm,o.IsVirtual);
             }
             else if (model.clientDataStatus == LibClientDataStatus.Edit)
             {
                 o.LibModelStatus = LibModelStatus.Edit;
                 U_TableFieldInfo old = model.OldDatas as U_TableFieldInfo;
-                sql.AppendFormat(" EXEC sp_executesql N'update {0} set TableNm=@TableNm,ClientId=@ClientId,FieldNm=@FieldNm,FieldDesc=@FieldDesc,DataType=@DataType,IsPrimaryKey=@IsPrimaryKey,DataLength=@DataLength,PointLength=@PointLength,LastModifyDT=@LastModifyDT,LastModifier=@LastModifier ", tableNm);
+                sql.AppendFormat(" EXEC sp_executesql N'update {0} set TableNm=@TableNm,ClientId=@ClientId,FieldNm=@FieldNm,FieldDesc=@FieldDesc,DataType=@DataType,IsPrimaryKey=@IsPrimaryKey,DataLength=@DataLength,PointLength=@PointLength,LastModifyDT=@LastModifyDT,LastModifier=@LastModifier,MaxLength=@MaxLength,FromDataSource=@FromDataSource,FromFieldNm=@FromFieldNm,FromFieldDescNm=@FromFieldDescNm,IsVirtual=@IsVirtual ", tableNm);
                 sql.Append(" where TableNm=@oldTableNm and ClientId=@ClientId and FieldNm=@oldFieldNm '");
                 //sql.Append(" values(@TableNm,@ClientId,@FieldNm,@FieldDesc,@DataType,@IsPrimaryKey,@DataLength,@PointLength, @IsDeleted,@CreateDT,@Creater,@app_logid)'");
-                sql.Append(",N'@TableNm nvarchar(30),@ClientId nvarchar(15),@FieldNm nvarchar(30),@FieldDesc nvarchar(50),@DataType int,@IsPrimaryKey bit,@DataLength int,@PointLength int, @LastModifyDT datetime,@LastModifier nvarchar(30),@oldTableNm  nvarchar(30),@oldFieldNm nvarchar(30)',");
-                sql.AppendFormat("  @TableNm='{0}',@ClientId='{1}',@FieldNm='{2}',@FieldDesc='{3}',@DataType={4},@IsPrimaryKey='{5}', @DataLength={6},@PointLength={7}, @LastModifyDT='{8}', @LastModifier='{9}',@oldTableNm='{10}',@oldFieldNm='{11}' ",
-                                              o.TableNm, this.UserInfo.ClientId, o.FieldNm, o.FieldDesc, (int)o.DataType, o.IsPrimaryKey, o.DataLength, o.PointLength, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss:fff"), this.UserInfo.UserNm, (old == null ? o.TableNm : old.TableNm), (old == null ? o.FieldNm : old.FieldNm));
+                sql.Append(",N'@TableNm nvarchar(30),@ClientId nvarchar(15),@FieldNm nvarchar(30),@FieldDesc nvarchar(50),@DataType int,@IsPrimaryKey bit,@DataLength int,@PointLength int, @LastModifyDT datetime,@LastModifier nvarchar(30),@oldTableNm  nvarchar(30),@oldFieldNm nvarchar(30),@MaxLength int,@FromDataSource nvarchar(30),@FromFieldNm nvarchar(30),@FromFieldDescNm nvarchar(30),@IsVirtual bit ',");
+                sql.AppendFormat("  @TableNm='{0}',@ClientId='{1}',@FieldNm='{2}',@FieldDesc='{3}',@DataType={4},@IsPrimaryKey='{5}', @DataLength={6},@PointLength={7}, @LastModifyDT='{8}', @LastModifier='{9}',@oldTableNm='{10}',@oldFieldNm='{11}',@MaxLength={12},@FromDataSource='{13}',@FromFieldNm='{14}',@FromFieldDescNm='{15}',@IsVirtual='{16}' ",
+                                              o.TableNm, this.UserInfo.ClientId, o.FieldNm, o.FieldDesc, (int)o.DataType, o.IsPrimaryKey, o.DataLength, o.PointLength, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss:fff"), this.UserInfo.UserNm, (old == null ? o.TableNm : old.TableNm), (old == null ? o.FieldNm : old.FieldNm), o.MaxLength, o.FromDataSource, o.FromFieldNm, o.FromFieldDescNm, o.IsVirtual);
             }
             return sql.ToString();
         }
@@ -277,6 +296,7 @@ namespace ErpCode.UserDal
                 foreach (var f in o)
                 {
                     if (f.Key == AppConstManage.applogid) continue;
+                    if (this.U_TableFields.FirstOrDefault(i => i.TableNm == custableNm && i.FieldNm == f.Key && i.IsVirtual) != null) continue;
                     sql.AppendFormat(" EXEC sp_executesql N'insert into {0}(TableNm,ClientId,FieldNm,FieldValue,IsDeleted,CreateDT,Creater,app_logid) ", storagetableNm);
                     sql.Append(" values(@TableNm,@ClientId,@FieldNm,@FieldValue,@IsDeleted,@CreateDT,@Creater,@app_logid)'");
                     sql.Append(",N'@TableNm nvarchar(30),@ClientId nvarchar(15),@FieldNm nvarchar(30),@FieldValue nvarchar(max),@IsDeleted bit,@CreateDT datetime,@Creater nvarchar(30),@app_logid nvarchar(50)',");
@@ -290,9 +310,17 @@ namespace ErpCode.UserDal
                 foreach (var f in o)
                 {
                     if (f.Key == AppConstManage.applogid) continue;
+                    sql.AppendFormat(" EXEC sp_executesql N'update {0} set FieldValue=@FieldValue ", storagetableNm);
+                    sql.Append(" where ClientId=@ClientId and TableNm=@TableNm and FieldNm=@FieldNm and app_logid=@app_logid '");
+                    sql.Append(",N'@TableNm nvarchar(30),@ClientId nvarchar(15),@FieldNm nvarchar(30),@FieldValue nvarchar(max),@LastModifyDT datetime,@LastModifier nvarchar(30),@app_logid nvarchar(50)',");
+                    sql.AppendFormat("  @TableNm='{0}',@ClientId='{1}',@FieldNm='{2}',@FieldValue='{3}', @LastModifyDT='{4}', @LastModifier='{5}', @app_logid='{6}'",
+                                                 custableNm, this.UserInfo.ClientId, f.Key, f.Value, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss:fff"), this.UserInfo.UserNm, o[AppConstManage.applogid]);
                 }
             }
-
+            else if (model.clientDataStatus == LibClientDataStatus.Delete)
+            {
+                
+            }
             return sql.ToString();
         }
 
@@ -313,6 +341,15 @@ namespace ErpCode.UserDal
             return result;
         }
 
+        private string GetUdataTableNm(string dynamictbnm)
+        {
+            LibDbParameter[] parameters = new LibDbParameter[2];
+            parameters[0] = new LibDbParameter { ParameterNm = "@dynamicTableNm", DbType = DbType.String, Value = dynamictbnm };
+            parameters[1] = new LibDbParameter { ParameterNm = "@storagetbnm", DbType = DbType.String, Size = 35, Direction = ParameterDirection.Output, Value = string.Empty };
+           this.dBContext.Database.ExeStoredProcedure("p_AddUDataTable", parameters);
+            return parameters[1].Value.ToString();
+        }
+
         //private string DoCreatesql(object model, string tableNm)
         //{
 
@@ -325,5 +362,6 @@ namespace ErpCode.UserDal
         //    sql.AppendFormat(" from {0}", tbnm);
 
         //}
+        #endregion 
     }
 }
