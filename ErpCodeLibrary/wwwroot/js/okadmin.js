@@ -155,7 +155,11 @@ layui.use(["element", "layer", "okUtils", "okTab", "okLayer", "jQContextMenu"], 
                     prog = respon.Data.ProgNm.toUpperCase();
                     var a = document.createElement("a");
                     a.setAttribute("lay-id", prog);
-                    a.setAttribute("data-url", "pages/funcpage.html?prog=" + prog + "");
+                    if (respon.Data.ProgKind == 1)
+                        a.setAttribute("data-url", "pages/funcpage.html?prog=" + prog + "");
+                    else if (respon.Data.ProgKind == 2) {
+                        a.setAttribute("data-url", "pages/Reportpage.html?prog=" + prog + "");
+                    }
                     //a.setAttribute("class", "ok-refresh");
 
                     var i = document.createElement("i");

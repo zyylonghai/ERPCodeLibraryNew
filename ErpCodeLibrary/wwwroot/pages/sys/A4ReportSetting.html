@@ -292,7 +292,8 @@
     var controls = [],fields=[],prog;
     var canvas = document.getElementById("formdesigncanvas");
     $(function () {
-          prog = new PageObj();
+        prog = new PageObj();
+        prog.ProgKind = 2;
     });
     $load(function () {
         getDataSource();

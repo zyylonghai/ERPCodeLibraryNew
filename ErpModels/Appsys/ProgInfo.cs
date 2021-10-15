@@ -49,6 +49,9 @@ namespace ErpModels.Appsys
         /// <summary> 禁用日志查询按钮</summary>
         public bool HasLogSearchbtn { get; set; }
 
+        /// <summary>功能种类</summary>
+        public ProgKind ProgKind { get; set; }
+
         /// <summary>是否开发者功能,默认false</summary>
         [NotMapped]
         public bool IsDeveloper { get; set; }
@@ -69,5 +72,16 @@ namespace ErpModels.Appsys
         [Key]
         public string progNm { get; set; }
         public string HtmlStr { get; set; }
+    }
+
+    /// <summary>功能种类</summary>
+    public enum ProgKind
+    {
+        /// <summary>普通数据维护功能</summary>
+        Ordinary=1,
+        /// <summary>A4报表功能</summary>
+        A4Rpt=2,
+        /// <summary>搜索类报表</summary>
+        SearchRpt=3
     }
 }

@@ -23,7 +23,7 @@ namespace ErpCodeLibrary.ApiControllers.SYS
         public ResponseMsg GetUserMenuByUserCode(string code)
         {
             var menu = this.tDal.GetUserMenuByUserCode(code);
-            return new ResponseMsg { IsSuccess = true, Data = menu };
+            return new ResponseMsg { IsSuccess = menu != null, Data = menu };
         }
     }
 }

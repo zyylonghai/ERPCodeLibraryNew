@@ -51,21 +51,30 @@ namespace ErpCode.comDal
 
         public UserMenu GetUserMenuByUserCode(string code)
         {
+            string prognm = string.Empty;
             var data = this.dBContext.UserMenu.FirstOrDefault(i => (i.UserMenuCode.ToUpper() == code.ToUpper() || i.ProgNm.ToUpper() == code.ToUpper()) 
                                      && i.UserId ==this.UserInfo .UserId && i.ClientId ==this.UserInfo .ClientId && !i.IsDeleted);
             if (data == null)
             {
-                using (AppDBContext appdb = new AppDBContext())
-                {
-                    var pg = appdb.ProgInfo.FirstOrDefault(i => i.progNm.ToUpper() == code.ToUpper() && i.ClientId == this.UserInfo.ClientId && !i.IsDeleted);
-                    if (pg==null)
-                    {
-                        pg = appdb.ProgInfo.FirstOrDefault(i => i.progNm.ToUpper() == code.ToUpper() && i.ClientId == AppConstManage.appDeveloper && !i.IsDeleted);
-                    }
-                    return new UserMenu { ProgNm = pg.progNm, MenuName = pg.progDesc };
-                }
+                prognm = code.ToUpper();
             }
-            return data;
+            else
+            {
+                prognm = data.ProgNm.ToUpper();
+            }
+            using (AppDBContext appdb = new AppDBContext())
+            {
+                var pg = appdb.ProgInfo.FirstOrDefault(i => i.progNm.ToUpper() == prognm && i.ClientId == this.UserInfo.ClientId && !i.IsDeleted);
+                if (pg == null)
+                {
+                    pg = appdb.ProgInfo.FirstOrDefault(i => i.progNm.ToUpper() == prognm && i.ClientId == AppConstManage.appDeveloper && !i.IsDeleted);
+                }
+                if (pg != null)
+                    return new UserMenu { ProgNm = pg.progNm, MenuName = pg.progDesc, ProgKind = (int)pg.ProgKind };
+                else
+                    return null ;
+            }
+            //return data;
         }
     }
 }

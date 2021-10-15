@@ -22,10 +22,10 @@ namespace ErpCodeLibrary.ApiControllers.COM
             heard.checker = "zhengyiyong";
             heard.checkdt = DateTime .Now .ToString ("yyyy-MM-dd");
             var data = this.ClientDatas.FirstOrDefault(i => i.TableNm == "CheckRptData");
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 20; i++)
             {
                 CheckRptData d = new CheckRptData();
-                d.data1 = "kdjsf";
+                d.data1 = "kdjsf"+i.ToString ();
                 d.data2 = "kkkk";
                 d.data3 = "llllsdk";
                 d.data4 = "少了几分";

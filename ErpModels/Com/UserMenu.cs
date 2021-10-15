@@ -22,6 +22,8 @@ namespace ErpModels.Com
         public LibMenuType MenuType { get; set; }
         [NotMapped]
         public bool Spread { get; set; }
+        [NotMapped]
+        public int ProgKind { get; set; }
         public override void OnModelBuilder(ModelBuilder builder)
         {
             base.OnModelBuilder(builder);

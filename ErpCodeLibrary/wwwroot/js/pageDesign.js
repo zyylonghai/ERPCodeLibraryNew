@@ -13,6 +13,7 @@
     this.HasCopybtn = true;
     this.HasSearchbtn = true;
     this.HasLogSearchbtn = true;
+    this.ProgKind = 1;
 }
 function ControlObj(id, title) {
     this.progNm;
